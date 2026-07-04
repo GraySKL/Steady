@@ -1,0 +1,1257 @@
+<style>
+  /* ---------- Tokens ---------- */
+  :root{
+    --bg:#EEF3F1; --surface:#FFFFFF; --surface-2:#F5F9F7;
+    --ink:#17302C; --ink-2:#4C605B; --muted:#83938E;
+    --line:#DCE7E2;
+    --accent:#0E8C79; --accent-ink:#0B6F60; --accent-soft:#D8EEE9;
+    --good:#2F855A; --good-soft:#DCEEE3;
+    --watch:#B07414; --watch-soft:#F3E6CC;
+    --flare:#BE4E38; --flare-soft:#F3DDD6;
+    --radius:16px; --radius-sm:12px;
+    --shadow:0 1px 2px rgba(20,40,36,.05),0 8px 24px rgba(20,40,36,.06);
+    --tap:52px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0E1518; --surface:#15211F; --surface-2:#1B2A27;
+      --ink:#E7F0ED; --ink-2:#AABBB5; --muted:#7C8D88;
+      --line:#263733;
+      --accent:#34C3AC; --accent-ink:#5AD3BF; --accent-soft:#123029;
+      --good:#57B383; --good-soft:#14261D;
+      --watch:#D9A441; --watch-soft:#2A2213;
+      --flare:#E27A63; --flare-soft:#2E1913;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF3F1; --surface:#FFFFFF; --surface-2:#F5F9F7;
+    --ink:#17302C; --ink-2:#4C605B; --muted:#83938E; --line:#DCE7E2;
+    --accent:#0E8C79; --accent-ink:#0B6F60; --accent-soft:#D8EEE9;
+    --good:#2F855A; --good-soft:#DCEEE3;
+    --watch:#B07414; --watch-soft:#F3E6CC;
+    --flare:#BE4E38; --flare-soft:#F3DDD6;
+    --shadow:0 1px 2px rgba(20,40,36,.05),0 8px 24px rgba(20,40,36,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1518; --surface:#15211F; --surface-2:#1B2A27;
+    --ink:#E7F0ED; --ink-2:#AABBB5; --muted:#7C8D88; --line:#263733;
+    --accent:#34C3AC; --accent-ink:#5AD3BF; --accent-soft:#123029;
+    --good:#57B383; --good-soft:#14261D;
+    --watch:#D9A441; --watch-soft:#2A2213;
+    --flare:#E27A63; --flare-soft:#2E1913;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font); font-size:18px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  #app{
+    max-width:520px; margin:0 auto; min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding-bottom:calc(var(--tap) + 34px);
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:16px 18px 12px;
+    background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:saturate(1.2) blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px}
+  .brand .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 4px var(--accent-soft)}
+  .brand h1{font-size:20px; margin:0; font-weight:700; letter-spacing:-.01em}
+  .brand span{display:block; font-size:12.5px; color:var(--muted); font-weight:500; letter-spacing:.02em}
+  .iconbtn{
+    appearance:none; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink-2); border-radius:12px; height:44px; min-width:44px; padding:0 12px;
+    font-size:14px; font-weight:600; cursor:pointer; display:inline-flex;
+    align-items:center; gap:7px;
+  }
+  .iconbtn:active{transform:scale(.97)}
+
+  /* ---------- Layout ---------- */
+  main{flex:1; padding:18px 18px 8px; display:flex; flex-direction:column; gap:16px}
+  .screen{display:none; flex-direction:column; gap:16px; animation:rise .25s ease}
+  .screen.active{display:flex}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .screen,.screen.active{animation:none}
+  }
+
+  .eyebrow{font-size:12.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--muted); font-weight:700; margin:2px 0}
+  .greeting{font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0 0 2px;
+    text-wrap:balance}
+  .sub{color:var(--ink-2); margin:0}
+
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:14px;
+  }
+  .card h2{font-size:17px; margin:0; font-weight:700; letter-spacing:-.01em}
+  .card .hint{color:var(--muted); font-size:14.5px; margin:0}
+
+  /* ---------- Big action buttons ---------- */
+  .actions{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .bigbtn{
+    appearance:none; cursor:pointer; text-align:left;
+    border:1px solid var(--line); background:var(--surface);
+    border-radius:var(--radius); padding:16px; min-height:96px;
+    display:flex; flex-direction:column; justify-content:space-between; gap:10px;
+    box-shadow:var(--shadow); color:var(--ink); font-family:inherit;
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .bigbtn:active{transform:scale(.98)}
+  .bigbtn .lbl{font-size:16px; font-weight:700}
+  .bigbtn .desc{font-size:13px; color:var(--muted); line-height:1.4}
+  .bigbtn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .bigbtn.primary .desc{color:rgba(255,255,255,.85)}
+  .bigbtn .ico{width:26px;height:26px;color:var(--accent)}
+  .bigbtn.primary .ico{color:#fff}
+
+  .btn{
+    appearance:none; cursor:pointer; font-family:inherit; font-size:16px; font-weight:700;
+    border-radius:14px; padding:0 20px; min-height:var(--tap); border:1px solid transparent;
+    display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.ghost{background:var(--surface); color:var(--ink); border-color:var(--line)}
+  .btn.subtle{background:var(--surface-2); color:var(--ink-2); border-color:var(--line)}
+  .btn.block{width:100%}
+  .btn:disabled{opacity:.5; cursor:default}
+
+  /* ---------- Chips ---------- */
+  .chips{display:flex; flex-wrap:wrap; gap:9px}
+  .chip{
+    appearance:none; cursor:pointer; font-family:inherit; font-size:15px; font-weight:600;
+    border:1.5px solid var(--line); background:var(--surface); color:var(--ink-2);
+    border-radius:999px; padding:11px 15px; min-height:46px; line-height:1;
+    display:inline-flex; align-items:center; gap:7px; transition:all .12s ease;
+  }
+  .chip[aria-pressed="true"]{
+    background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink);
+  }
+  .chip.flare[aria-pressed="true"]{background:var(--flare-soft); border-color:var(--flare); color:var(--flare)}
+  .chip:active{transform:scale(.97)}
+
+  /* Feeling scale */
+  .scale{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+  .scale button{
+    appearance:none; cursor:pointer; font-family:inherit; font-weight:700; font-size:14px;
+    border:1.5px solid var(--line); background:var(--surface); color:var(--ink-2);
+    border-radius:14px; padding:12px 4px; min-height:74px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px; line-height:1.15; text-align:center;
+  }
+  .scale button .face{font-size:22px}
+  .scale button[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink)}
+  .scale button .cap{font-size:11px; font-weight:600}
+
+  /* Severity segmented */
+  .seg{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+  .seg button{
+    appearance:none; cursor:pointer; font-family:inherit; font-weight:700; font-size:15px;
+    border:1.5px solid var(--line); background:var(--surface); color:var(--ink-2);
+    border-radius:12px; min-height:52px;
+  }
+  .seg button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+
+  label.field{display:flex; flex-direction:column; gap:8px; font-weight:600; font-size:14px; color:var(--ink-2)}
+  textarea,input[type="number"],input[type="text"]{
+    font-family:inherit; font-size:17px; color:var(--ink); background:var(--surface-2);
+    border:1.5px solid var(--line); border-radius:12px; padding:14px; width:100%;
+  }
+  textarea{min-height:80px; resize:vertical; line-height:1.5}
+  input[type="number"]{font-variant-numeric:tabular-nums}
+
+  /* ---------- Stat / result blocks ---------- */
+  .stat{display:flex; align-items:baseline; gap:10px}
+  .stat .n{font-size:40px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1}
+  .stat .u{font-size:15px; color:var(--muted); font-weight:600}
+  .pill{display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:700;
+    padding:6px 12px; border-radius:999px; line-height:1}
+  .pill.good{background:var(--good-soft); color:var(--good)}
+  .pill.watch{background:var(--watch-soft); color:var(--watch)}
+  .pill.flare{background:var(--flare-soft); color:var(--flare)}
+  .pill .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .divider{height:1px; background:var(--line); border:0; margin:2px 0}
+
+  .readingrow{
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px;
+    padding:12px 14px; border:1.5px solid var(--line); border-radius:14px; background:var(--surface-2);
+  }
+  .readingrow.due{border-color:var(--accent); background:var(--accent-soft)}
+  .readingrow .when{font-weight:700; font-size:15px}
+  .readingrow .who{font-size:12.5px; color:var(--muted)}
+  .readingrow input{max-width:96px; text-align:center; padding:10px; background:var(--surface)}
+
+  .timer{font-size:52px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+    text-align:center; margin:6px 0}
+  .timer.small{font-size:34px}
+
+  ul.list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
+  .item{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item .time{font-size:12.5px; color:var(--muted); white-space:nowrap; min-width:74px; font-weight:600}
+  .item .body{flex:1}
+  .item .body .t{font-weight:600; font-size:15px}
+  .item .body .m{font-size:13.5px; color:var(--muted)}
+  .tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:8px;
+    background:var(--surface-2); color:var(--ink-2); margin:3px 6px 0 0; border:1px solid var(--line)}
+
+  .empty{text-align:center; color:var(--muted); padding:26px 10px; display:flex; flex-direction:column; gap:8px; align-items:center}
+  .empty svg{width:34px;height:34px;opacity:.5}
+
+  .note{font-size:13px; color:var(--muted); line-height:1.5}
+  .callout{background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
+    font-size:14px; color:var(--ink-2); line-height:1.55}
+  .callout strong{color:var(--ink)}
+
+  /* charts */
+  .chartwrap{width:100%; overflow-x:auto}
+  svg.chart{display:block; width:100%; height:auto}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--ink-2); font-weight:600}
+  .legend span{display:inline-flex; align-items:center; gap:7px}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .legend i.dashed{height:0;border-top:2px dashed var(--muted);width:16px}
+
+  /* ---------- Bottom nav ---------- */
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    max-width:520px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(4,1fr);
+    background:color-mix(in srgb,var(--surface) 94%,transparent);
+    backdrop-filter:saturate(1.2) blur(10px);
+    border-top:1px solid var(--line);
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));
+  }
+  .tab{
+    appearance:none; border:0; background:transparent; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 4px 6px;
+    color:var(--muted); font-size:11.5px; font-weight:700; border-radius:12px;
+  }
+  .tab svg{width:24px;height:24px}
+  .tab[aria-current="true"]{color:var(--accent)}
+  .tab:active{transform:scale(.95)}
+
+  /* toast */
+  #toast{
+    position:fixed; left:50%; bottom:calc(var(--tap) + 52px); transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--bg); padding:12px 18px; border-radius:999px; font-weight:600;
+    font-size:14.5px; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:all .25s ease; z-index:50;
+    max-width:90%;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  :focus-visible{outline:3px solid var(--accent); outline-offset:2px; border-radius:8px}
+</style>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <h1>Steady</h1>
+        <span>your body, tracked gently</span>
+      </div>
+    </div>
+    <button class="iconbtn" id="menuBtn" aria-label="Backup and settings">Backup</button>
+  </header>
+
+  <main>
+    <!-- ============ TODAY ============ -->
+    <section class="screen active" id="today" aria-label="Today">
+      <div>
+        <p class="eyebrow" id="todayDate">Today</p>
+        <h2 class="greeting" id="hello">Hi Sara</h2>
+        <p class="sub">How's your body feeling right now?</p>
+      </div>
+
+      <div class="card">
+        <div class="scale" id="feelScale" role="group" aria-label="Overall feeling">
+          <button data-feel="1" aria-pressed="false"><span class="face">🌧️</span><span class="cap">Rough</span></button>
+          <button data-feel="2" aria-pressed="false"><span class="face">🌥️</span><span class="cap">Low</span></button>
+          <button data-feel="3" aria-pressed="false"><span class="face">⛅</span><span class="cap">Okay</span></button>
+          <button data-feel="4" aria-pressed="false"><span class="face">🌤️</span><span class="cap">Good</span></button>
+          <button data-feel="5" aria-pressed="false"><span class="face">☀️</span><span class="cap">Great</span></button>
+        </div>
+        <p class="hint" id="feelSaved" hidden>Saved — thank you for checking in.</p>
+      </div>
+
+      <div class="actions">
+        <button class="bigbtn primary" id="goStand">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+          <div>
+            <div class="lbl">Stand test</div>
+            <div class="desc">Check your heart-rate jump (POTS)</div>
+          </div>
+        </button>
+        <button class="bigbtn" id="goLog">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          <div>
+            <div class="lbl">Log symptoms</div>
+            <div class="desc">Note how you feel + triggers</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="card" id="connectCard" style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+        <div>
+          <div style="font-weight:700;font-size:15px">Get my Fitbit data</div>
+          <p class="hint" style="margin:2px 0 0">Guided export → resting HR, sleep &amp; HRV</p>
+        </div>
+        <span class="btn subtle" style="min-height:44px;padding:0 18px;pointer-events:none">Open</span>
+      </div>
+
+      <div class="card" id="todaySummary">
+        <div class="row">
+          <h2>Today so far</h2>
+        </div>
+        <div id="todaySummaryBody"></div>
+      </div>
+
+      <p class="note" style="text-align:center">Steady helps you notice patterns and share them with your doctor. It doesn't diagnose anything.</p>
+    </section>
+
+    <!-- ============ STAND TEST ============ -->
+    <section class="screen" id="stand" aria-label="Stand test">
+      <div>
+        <p class="eyebrow">Stand test</p>
+        <h2 class="greeting">Standing heart rate</h2>
+        <p class="sub">A gentle at-home version of the test doctors use for POTS.</p>
+      </div>
+      <div id="standFlow"></div>
+    </section>
+
+    <!-- ============ LOG ============ -->
+    <section class="screen" id="log" aria-label="Log symptoms">
+      <div>
+        <p class="eyebrow">Log</p>
+        <h2 class="greeting">How are you feeling?</h2>
+        <p class="sub">Tap anything that fits. Nothing here is required.</p>
+      </div>
+
+      <div class="card">
+        <h2>Symptoms</h2>
+        <div class="chips" id="symptomChips"></div>
+      </div>
+
+      <div class="card">
+        <h2>How intense, overall?</h2>
+        <div class="seg" id="severitySeg" role="group" aria-label="Severity">
+          <button data-sev="1" aria-pressed="false">1</button>
+          <button data-sev="2" aria-pressed="false">2</button>
+          <button data-sev="3" aria-pressed="false">3</button>
+          <button data-sev="4" aria-pressed="false">4</button>
+          <button data-sev="5" aria-pressed="false">5</button>
+        </div>
+        <p class="hint">1 = barely there &nbsp;·&nbsp; 5 = severe</p>
+      </div>
+
+      <div class="card">
+        <h2>Anything that set it off?</h2>
+        <div class="chips" id="triggerChips"></div>
+      </div>
+
+      <div class="card">
+        <label class="field">Notes (optional)
+          <textarea id="logNote" placeholder="Anything you want to remember about right now…"></textarea>
+        </label>
+      </div>
+
+      <button class="btn primary block" id="saveLog">Save this log</button>
+      <div style="height:4px"></div>
+
+      <div class="card">
+        <h2>Recent logs</h2>
+        <div id="recentLogs"></div>
+      </div>
+    </section>
+
+    <!-- ============ TRENDS ============ -->
+    <section class="screen" id="trends" aria-label="Trends">
+      <div>
+        <p class="eyebrow">Trends</p>
+        <h2 class="greeting">Your bigger picture</h2>
+        <p class="sub">Patterns build up as you use Steady. Here's what's showing so far.</p>
+      </div>
+
+      <div class="card" id="insightCardWrap">
+        <div class="row"><h2>What your body's telling you</h2></div>
+        <div id="insightCard"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>Resting heart rate</h2><span class="hint" id="rhrLatest"></span></div>
+        <p class="hint">From your Fitbit. A resting heart rate that creeps up can travel with flares and rough patches.</p>
+        <div id="hrChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>Sleep</h2><span class="hint" id="sleepLatest"></span></div>
+        <p class="hint">Hours asleep each night, from your Fitbit.</p>
+        <div id="sleepChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>Standing heart-rate jump</h2></div>
+        <p class="hint">How much your heart rate rose on standing, each test. The dashed line is the level doctors often look at (+30).</p>
+        <div id="standChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>How you've been feeling</h2></div>
+        <p class="hint">Your daily check-ins over the last two weeks.</p>
+        <div id="feelChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>Most common symptoms</h2></div>
+        <div id="symptomRank"></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><h2>Most common triggers</h2></div>
+        <div id="triggerRank"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Sections">
+    <button class="tab" data-nav="today" aria-current="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      Today
+    </button>
+    <button class="tab" data-nav="stand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+      Stand test
+    </button>
+    <button class="tab" data-nav="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Log
+    </button>
+    <button class="tab" data-nav="trends">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M7 15l3.5-4 3 2.5L21 7"/></svg>
+      Trends
+    </button>
+  </nav>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  const KEY = "steady_v1";
+  const $ = (s,el)=> (el||document).querySelector(s);
+  const $$ = (s,el)=> Array.from((el||document).querySelectorAll(s));
+
+  const SYMPTOMS = ["Dizzy / lightheaded","Near-faint","Fainted","Fatigue","Brain fog",
+    "Joint pain","Subluxation / dislocation","Headache / migraine","Nausea",
+    "Racing heart","Temperature swings","Shaky / weak","Poor sleep","GI trouble"];
+  const TRIGGERS = ["Standing a while","Heat","Not enough fluids","Not enough salt",
+    "Poor sleep","Stress","Overdid it","Menstrual","Weather change","Big meal","Illness"];
+
+  // true only inside the installed phone app (Capacitor), false in the web/artifact version
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
+  const state = load();
+
+  function emptyHealth(){ return {restingHR:{}, sleepMin:{}, hrv:{}, steps:{}, lastImport:null}; }
+  function defaultState(){ return {version:1, settings:{ageGroup:"adult"}, standTests:[], logs:[], feelings:[], health:emptyHealth()}; }
+  function load(){
+    try{ const s = JSON.parse(localStorage.getItem(KEY)); if(!s||typeof s!=="object") return defaultState();
+      s.standTests=s.standTests||[]; s.logs=s.logs||[]; s.feelings=s.feelings||[]; s.settings=s.settings||{ageGroup:"adult"};
+      s.health = Object.assign(emptyHealth(), s.health||{});
+      return s;
+    }catch(e){ return defaultState(); }
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast("Couldn't save — try Backup to keep your data safe."); } }
+
+  function toast(msg){
+    const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._t); t._t = setTimeout(()=> t.classList.remove("show"), 2600);
+  }
+
+  /* ---------- date helpers ---------- */
+  function fmtDate(d){ return d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}); }
+  function fmtTime(ts){ return new Date(ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+  // parse a "YYYY-MM-DD" string as a LOCAL date (not UTC), so day labels don't shift by a day
+  function toLocalDate(ts){ if(typeof ts==="string"){ const m=ts.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m) return new Date(+m[1],+m[2]-1,+m[3]); } return new Date(ts); }
+  function dayKey(ts){ const d=toLocalDate(ts); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+  function isToday(ts){ return dayKey(ts)===dayKey(Date.now()); }
+  function relDay(ts){
+    const a=toLocalDate(ts); a.setHours(0,0,0,0);
+    const b=new Date(); b.setHours(0,0,0,0);
+    const diff=Math.round((b-a)/86400000);
+    if(diff===0) return "Today";
+    if(diff===1) return "Yesterday";
+    return a.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  }
+  // padded YYYY-MM-DD — matches the date keys used by imported Fitbit data
+  function isoDay(ts){ const d=new Date(ts); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function fmtHrs(min){ min=Math.round(min); const h=Math.floor(min/60), m=min%60; return h>0? (h+"h "+(m?m+"m":"").trim()).trim() : m+"m"; }
+  function latestVal(map){ const ks=Object.keys(map||{}).sort(); if(!ks.length) return null; const k=ks[ks.length-1]; return {date:k, value:map[k]}; }
+  function countKeys(map){ return Object.keys(map||{}).length; }
+
+  /* ---------- navigation ---------- */
+  function nav(name){
+    $$(".screen").forEach(s=> s.classList.toggle("active", s.id===name));
+    $$(".tab").forEach(t=> t.setAttribute("aria-current", t.dataset.nav===name ? "true":"false"));
+    window.scrollTo({top:0,behavior:"instant" in window ? "instant":"auto"});
+    if(name==="today") renderToday();
+    if(name==="stand") renderStand();
+    if(name==="log") renderLog();
+    if(name==="trends") renderTrends();
+  }
+  $$(".tab").forEach(t=> t.addEventListener("click", ()=> nav(t.dataset.nav)));
+  $("#goStand").addEventListener("click", ()=> nav("stand"));
+  $("#goLog").addEventListener("click", ()=> nav("log"));
+  $("#connectCard").addEventListener("click", openExportGuide);
+
+  /* ============ GET MY DATA (guided export) ============ */
+  function openExportGuide(){
+    const wrap = document.createElement("div");
+    wrap.style.cssText="position:fixed;inset:0;z-index:60;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center";
+    wrap.innerHTML = `
+      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto">
+        <div class="row"><h2 style="margin:0;font-size:19px">Get your Fitbit data</h2><button class="iconbtn" id="closeGuide" aria-label="Close">Close</button></div>
+        <p class="hint" style="margin:0">A one-time-ish export. Google prepares the file and <strong>emails it to you</strong> — that can take a few minutes or a few hours.</p>
+        <a class="btn primary block" href="https://takeout.google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none">Open Google Takeout ↗</a>
+        <p class="hint" style="margin:0;text-align:center">or go to <strong>takeout.google.com</strong> in your browser</p>
+        <hr class="divider">
+        <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:11px;font-size:15px;line-height:1.5">
+          <li>If it asks, <strong>sign in</strong> — that's Google's own login, I never see it.</li>
+          <li>Near the top, tap <strong>Deselect all</strong>.</li>
+          <li>Scroll to <strong>Fitbit</strong> and tick <em>only</em> Fitbit.</li>
+          <li>Scroll to the bottom, tap <strong>Next step</strong>.</li>
+          <li>Leave it as <strong>.zip</strong>, then tap <strong>Create export</strong>.</li>
+          <li>Wait for Google's <strong>email</strong>, then tap the link and <strong>download the .zip</strong>.</li>
+        </ol>
+        <hr class="divider">
+        <div class="callout">Got the file? Tap <strong>Backup</strong> (top-right) → <strong>Import Fitbit data</strong>. When the file box opens, tap <strong>Search</strong> 🔍 and type <strong>takeout</strong> — it jumps straight to it (it lives in your <strong>Downloads</strong>). Pick it and you're done.</div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close=()=> wrap.remove();
+    $("#closeGuide").addEventListener("click", close);
+    wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
+  }
+
+  /* ============ TODAY ============ */
+  function renderToday(){
+    $("#todayDate").textContent = fmtDate(new Date());
+    // reflect today's feeling
+    const todayFeel = [...state.feelings].reverse().find(f=> isToday(f.ts));
+    $$("#feelScale button").forEach(b=> b.setAttribute("aria-pressed", todayFeel && String(todayFeel.value)===b.dataset.feel ? "true":"false"));
+    $("#feelSaved").hidden = !todayFeel;
+
+    // summary
+    const box = $("#todaySummaryBody");
+    const logsToday = state.logs.filter(l=> isToday(l.ts));
+    const testsToday = state.standTests.filter(t=> isToday(t.ts));
+    const parts = [];
+    if(todayFeel){ const names=["","Rough","Low","Okay","Good","Great"];
+      parts.push(`<div class="row"><span>Feeling</span><span class="pill ${todayFeel.value>=4?'good':todayFeel.value<=2?'flare':'watch'}"><span class="d"></span>${names[todayFeel.value]}</span></div>`); }
+    if(testsToday.length){ const t=testsToday[testsToday.length-1];
+      parts.push(`<div class="row"><span>Latest stand test</span><span class="pill ${t.flagged?'watch':'good'}"><span class="d"></span>+${t.delta} bpm</span></div>`); }
+    if(logsToday.length){ parts.push(`<div class="row"><span>Symptom logs</span><span class="pill"><span class="d"></span>${logsToday.length}</span></div>`); }
+    // context from imported Fitbit data (may be from the last import, not literally today)
+    const rhr = latestVal(state.health.restingHR), slp = latestVal(state.health.sleepMin);
+    if(rhr) parts.push(`<div class="row"><span>Resting HR <span class="hint" style="font-size:12px">· ${relDay(rhr.date)}</span></span><strong style="font-variant-numeric:tabular-nums">${rhr.value} bpm</strong></div>`);
+    if(slp) parts.push(`<div class="row"><span>Sleep <span class="hint" style="font-size:12px">· ${relDay(slp.date)}</span></span><strong style="font-variant-numeric:tabular-nums">${fmtHrs(slp.value)}</strong></div>`);
+    let html;
+    if(parts.length===0){
+      html = `<div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 9v6" stroke-linecap="round"/></svg>
+        <div>Nothing logged yet today.<br>Tap a weather face above, or use the big buttons.</div></div>`;
+    } else {
+      html = parts.join('<hr class="divider">');
+    }
+    box.innerHTML = html;
+  }
+  $$("#feelScale button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const v = parseInt(b.dataset.feel,10);
+      // one feeling per day: replace today's
+      state.feelings = state.feelings.filter(f=> !isToday(f.ts));
+      state.feelings.push({ts:Date.now(), value:v});
+      save(); renderToday(); toast("Checked in — got it.");
+    });
+  });
+
+  /* ============ STAND TEST ============ */
+  let stand = null; // active flow
+  function renderStand(){
+    if(stand && stand.phase) { drawStand(); return; }
+    stand = null;
+    const el = $("#standFlow");
+    const last = state.standTests[state.standTests.length-1];
+    el.innerHTML = `
+      <div class="callout">
+        <strong>How it works:</strong> rest lying down, take your resting heart rate, then stand up and
+        check it again at 1, 3, 5 and 10 minutes. Steady works out how much it jumped.
+        You'll need your pulse from a watch, phone, or fingers on your wrist.
+      </div>
+      ${ last ? `
+      <div class="card">
+        <h2>Your last test</h2>
+        <div class="row">
+          <div class="stat"><span class="n">+${last.delta}</span><span class="u">bpm jump</span></div>
+          <span class="pill ${last.flagged?'watch':'good'}"><span class="d"></span>${last.flagged?'Worth sharing':'Within typical'}</span>
+        </div>
+        <p class="hint">${relDay(last.ts)} · resting ${last.resting}, peak ${last.peak} bpm</p>
+      </div>`:"" }
+      <button class="btn primary block" id="beginStand">Start a stand test</button>
+      <p class="note" style="text-align:center">Do it somewhere you can sit or lie down straight away if you feel faint. Your safety comes first — stop any time.</p>
+    `;
+    $("#beginStand").addEventListener("click", startStand);
+  }
+
+  function startStand(){
+    stand = {phase:"rest", restSecs:300, elapsed:0, resting:null,
+      readings:{1:null,3:null,5:null,10:null}, standStart:null, timer:null};
+    drawStand();
+  }
+
+  function clearStandTimer(){ if(stand&&stand.timer){ clearInterval(stand.timer); stand.timer=null; } }
+
+  function drawStand(){
+    const el = $("#standFlow");
+    if(stand.phase==="rest"){
+      const left = stand.restSecs - stand.elapsed;
+      el.innerHTML = `
+        <div class="card">
+          <h2>Step 1 · Rest lying down</h2>
+          <p class="hint">Lie down and relax. When the timer's done, we'll take your resting heart rate. Already been resting? You can skip.</p>
+          <div class="timer" id="restTimer">${mmss(left)}</div>
+          <div class="actions" style="grid-template-columns:1fr 1fr">
+            <button class="btn subtle" id="restSkip">Skip — I'm rested</button>
+            <button class="btn ghost" id="restCancel">Cancel</button>
+          </div>
+        </div>`;
+      $("#restSkip").addEventListener("click", ()=>{ clearStandTimer(); stand.phase="resting"; drawStand(); });
+      $("#restCancel").addEventListener("click", cancelStand);
+      clearStandTimer();
+      stand.timer = setInterval(()=>{
+        stand.elapsed++;
+        const l = stand.restSecs - stand.elapsed;
+        const tEl = $("#restTimer"); if(tEl) tEl.textContent = mmss(Math.max(0,l));
+        if(l<=0){ clearStandTimer(); stand.phase="resting"; drawStand(); }
+      },1000);
+    }
+    else if(stand.phase==="resting"){
+      el.innerHTML = `
+        <div class="card">
+          <h2>Step 2 · Resting heart rate</h2>
+          <p class="hint">Still lying down, what's your heart rate right now?</p>
+          <label class="field">Resting heart rate (bpm)
+            <input type="number" inputmode="numeric" id="restingHR" min="30" max="220" placeholder="e.g. 72">
+          </label>
+          <button class="btn primary block" id="restingNext">Now I'll stand up →</button>
+          <button class="btn subtle block" id="restingBack">Back</button>
+        </div>`;
+      $("#restingNext").addEventListener("click", ()=>{
+        const v = parseInt($("#restingHR").value,10);
+        if(!v||v<30||v>220){ toast("Pop in your resting heart rate first."); return; }
+        stand.resting = v; stand.phase="standing"; stand.standStart=Date.now(); stand.elapsed=0;
+        drawStand();
+      });
+      $("#restingBack").addEventListener("click", ()=>{ stand.phase="rest"; stand.elapsed=stand.restSecs; drawStand(); });
+    }
+    else if(stand.phase==="standing"){
+      const secs = Math.floor((Date.now()-stand.standStart)/1000);
+      const mins = secs/60;
+      const marks = [1,3,5,10];
+      const rows = marks.map(m=>{
+        const due = mins>=m && stand.readings[m]==null;
+        const passed = mins>=m;
+        return `<div class="readingrow ${due?'due':''}">
+          <div><div class="when">${m} min</div><div class="who">${passed?'ready':'in '+mmss(m*60-secs)}</div></div>
+          <div class="who">${stand.readings[m]!=null?'✓ saved':'standing heart rate'}</div>
+          <input type="number" inputmode="numeric" min="30" max="220" data-mark="${m}" value="${stand.readings[m]!=null?stand.readings[m]:''}" placeholder="bpm" aria-label="${m} minute heart rate">
+        </div>`;
+      }).join("");
+      const any = Object.values(stand.readings).some(v=> v!=null);
+      el.innerHTML = `
+        <div class="card">
+          <h2>Step 3 · Standing</h2>
+          <p class="hint">Stay standing still. Enter your heart rate as each time arrives. Feeling faint? Sit down and enter what you have.</p>
+          <div class="timer small" id="standTimer">${mmss(secs)}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">${rows}</div>
+          <button class="btn primary block" id="finishStand" ${any?'':'disabled'}>Finish & see result</button>
+          <button class="btn subtle block" id="cancelStand2">Cancel</button>
+        </div>`;
+      $$('input[data-mark]').forEach(inp=>{
+        inp.addEventListener("input", ()=>{
+          const m = parseInt(inp.dataset.mark,10);
+          const v = parseInt(inp.value,10);
+          stand.readings[m] = (v>=30&&v<=220)? v : null;
+          const btn=$("#finishStand"); if(btn) btn.disabled = !Object.values(stand.readings).some(x=>x!=null);
+        });
+      });
+      $("#finishStand").addEventListener("click", finishStand);
+      $("#cancelStand2").addEventListener("click", cancelStand);
+      clearStandTimer();
+      stand.timer = setInterval(()=>{
+        const s = Math.floor((Date.now()-stand.standStart)/1000);
+        const tEl=$("#standTimer"); if(tEl) tEl.textContent = mmss(s);
+        // refresh due states without nuking inputs: update rows' classes/labels
+        marks.forEach(m=>{
+          const inp = $(`input[data-mark="${m}"]`); if(!inp) return;
+          const row = inp.closest(".readingrow");
+          const due = s/60>=m && stand.readings[m]==null;
+          row.classList.toggle("due", due);
+          const who = row.querySelector(".who");
+          who.textContent = s/60>=m ? "ready" : ("in "+mmss(m*60-s));
+        });
+      },1000);
+    }
+    else if(stand.phase==="done"){
+      const t = stand.result;
+      el.innerHTML = `
+        <div class="card">
+          <h2>Result</h2>
+          <div class="stat"><span class="n">+${t.delta}</span><span class="u">bpm jump on standing</span></div>
+          <div class="row">
+            <span class="pill ${t.flagged?'watch':'good'}"><span class="d"></span>${t.flagged?'Worth sharing with your doctor':'Within a typical range'}</span>
+          </div>
+          <hr class="divider">
+          <div class="row"><span class="hint">Resting</span><strong>${t.resting} bpm</strong></div>
+          <div class="row"><span class="hint">Peak standing</span><strong>${t.peak} bpm</strong></div>
+          <div class="callout">${t.flagged
+            ? `A sustained rise of <strong>30+ bpm</strong> (40+ if you're a teen) is the level doctors look at for POTS. This isn't a diagnosis — but it's worth showing your doctor, especially with a few tests together.`
+            : `Nice and steady this time. One test is just a snapshot — doing a few over different days gives the clearest picture.`}</div>
+          <button class="btn primary block" id="standDone">Done</button>
+          <button class="btn subtle block" id="standAgain">Do another</button>
+        </div>`;
+      $("#standDone").addEventListener("click", ()=>{ stand=null; nav("today"); });
+      $("#standAgain").addEventListener("click", startStand);
+    }
+  }
+
+  function finishStand(){
+    clearStandTimer();
+    const vals = Object.entries(stand.readings).filter(([m,v])=> v!=null);
+    if(!vals.length){ toast("Add at least one standing reading."); return; }
+    const peak = Math.max(...vals.map(([m,v])=> v));
+    const delta = peak - stand.resting;
+    const teen = state.settings.ageGroup==="teen";
+    const flagged = delta >= (teen?40:30);
+    const rec = {id:Date.now(), ts:Date.now(), resting:stand.resting, peak, delta, flagged,
+      readings: Object.fromEntries(vals)};
+    state.standTests.push(rec); save();
+    stand.phase="done"; stand.result=rec; drawStand();
+    toast("Stand test saved.");
+  }
+  function cancelStand(){ clearStandTimer(); stand=null; renderStand(); }
+  function mmss(s){ s=Math.max(0,Math.round(s)); const m=Math.floor(s/60); const r=s%60; return m+":"+String(r).padStart(2,"0"); }
+
+  /* ============ LOG ============ */
+  let logDraft = {symptoms:new Set(), triggers:new Set(), severity:null};
+  function renderLog(){
+    const sc = $("#symptomChips");
+    if(!sc.dataset.built){
+      sc.innerHTML = SYMPTOMS.map(s=>`<button class="chip" data-sym="${s}" aria-pressed="false">${s}</button>`).join("");
+      sc.dataset.built="1";
+      $$("#symptomChips .chip").forEach(c=> c.addEventListener("click", ()=>{
+        const s=c.dataset.sym; if(logDraft.symptoms.has(s)) logDraft.symptoms.delete(s); else logDraft.symptoms.add(s);
+        c.setAttribute("aria-pressed", logDraft.symptoms.has(s)?"true":"false");
+      }));
+    }
+    const tc = $("#triggerChips");
+    if(!tc.dataset.built){
+      tc.innerHTML = TRIGGERS.map(s=>`<button class="chip" data-trig="${s}" aria-pressed="false">${s}</button>`).join("");
+      tc.dataset.built="1";
+      $$("#triggerChips .chip").forEach(c=> c.addEventListener("click", ()=>{
+        const s=c.dataset.trig; if(logDraft.triggers.has(s)) logDraft.triggers.delete(s); else logDraft.triggers.add(s);
+        c.setAttribute("aria-pressed", logDraft.triggers.has(s)?"true":"false");
+      }));
+    }
+    renderRecentLogs();
+  }
+  $$("#severitySeg button").forEach(b=> b.addEventListener("click", ()=>{
+    logDraft.severity = parseInt(b.dataset.sev,10);
+    $$("#severitySeg button").forEach(x=> x.setAttribute("aria-pressed", x===b?"true":"false"));
+  }));
+  $("#saveLog").addEventListener("click", ()=>{
+    const note = $("#logNote").value.trim();
+    if(logDraft.symptoms.size===0 && logDraft.triggers.size===0 && !note && !logDraft.severity){
+      toast("Tap a symptom or add a note first."); return;
+    }
+    state.logs.push({id:Date.now(), ts:Date.now(),
+      symptoms:[...logDraft.symptoms], triggers:[...logDraft.triggers],
+      severity:logDraft.severity, note});
+    save();
+    // reset
+    logDraft = {symptoms:new Set(), triggers:new Set(), severity:null};
+    $$("#symptomChips .chip,#triggerChips .chip").forEach(c=> c.setAttribute("aria-pressed","false"));
+    $$("#severitySeg button").forEach(x=> x.setAttribute("aria-pressed","false"));
+    $("#logNote").value="";
+    renderRecentLogs();
+    toast("Log saved. Well done for tracking.");
+  });
+  function renderRecentLogs(){
+    const box = $("#recentLogs");
+    const logs = [...state.logs].reverse().slice(0,6);
+    if(!logs.length){ box.innerHTML = `<div class="empty"><div>No logs yet. Your first one starts the pattern.</div></div>`; return; }
+    box.innerHTML = `<ul class="list">`+ logs.map(l=>{
+      const tags = [...(l.symptoms||[]),...(l.triggers||[])].slice(0,6).map(t=>`<span class="tag">${t}</span>`).join("");
+      const sev = l.severity ? `<span class="pill ${l.severity>=4?'flare':l.severity>=3?'watch':'good'}" style="margin-left:8px"><span class="d"></span>${l.severity}/5</span>`:"";
+      return `<li class="item">
+        <span class="time">${relDay(l.ts)}<br>${fmtTime(l.ts)}</span>
+        <div class="body">
+          <div class="t">${(l.symptoms&&l.symptoms.length)? l.symptoms.length+" symptom"+(l.symptoms.length>1?"s":"") : "Note"} ${sev}</div>
+          <div>${tags}</div>
+          ${l.note?`<div class="m" style="margin-top:6px">${escapeHtml(l.note)}</div>`:""}
+        </div></li>`;
+    }).join("") + `</ul>`;
+  }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+  /* ============ TRENDS ============ */
+  function renderTrends(){
+    const h = state.health;
+    // Insights — the "better picture"
+    const ins = $("#insightCard");
+    const insights = healthInsights();
+    if(insights.length){
+      ins.innerHTML = insights.map(i=>`<div class="callout" style="margin-bottom:10px"><strong>${i.t}.</strong> ${i.m}</div>`).join("")
+        + `<p class="note">These are gentle patterns, not medical facts — but they can be useful to show your doctor.</p>`;
+    } else {
+      const hasHealth = countKeys(h.restingHR)||countKeys(h.sleepMin);
+      ins.innerHTML = `<div class="empty"><div>${ hasHealth
+        ? "Keep tapping a weather face each day — once there are a few good and rough days to compare, patterns will appear here."
+        : "Import your Fitbit data (tap <strong>Backup</strong>, top-right) and keep checking in daily. Then Steady can compare your good and rough days." }</div></div>`;
+    }
+    // Resting HR chart
+    const rhrArr = seriesFromMap(h.restingHR, 30);
+    const rl = latestVal(h.restingHR);
+    $("#rhrLatest").textContent = rl ? (rl.value+" bpm · "+relDay(rl.date)) : "";
+    $("#hrChart").innerHTML = rhrArr.some(d=>d.value!=null)
+      ? numLineChart(rhrArr, {unit:"bpm", decimals:0})
+      : emptyChart("Import your Fitbit data to see your resting heart rate here.");
+    // Sleep chart
+    const slpArr = seriesFromMap(h.sleepMin, 14).map(d=>({label:d.label, value: d.value!=null? Math.round(d.value/6)/10 : null})); // hours, 1dp
+    const sl = latestVal(h.sleepMin);
+    $("#sleepLatest").textContent = sl ? (fmtHrs(sl.value)+" · "+relDay(sl.date)) : "";
+    $("#sleepChart").innerHTML = slpArr.some(d=>d.value!=null)
+      ? hoursBars(slpArr)
+      : emptyChart("Import your Fitbit data to see your sleep here.");
+
+    // Stand test chart
+    const sc = $("#standChart");
+    const tests = state.standTests.slice(-12);
+    if(tests.length<1){
+      sc.innerHTML = emptyChart("Do your first stand test and its jump will appear here.");
+    } else {
+      sc.innerHTML = barChart(tests.map(t=>({label:relShort(t.ts), value:t.delta, flag:t.flagged})), 30)
+        + `<div class="legend"><span><i style="background:var(--accent)"></i>Within typical</span><span><i style="background:var(--watch)"></i>+30 or more</span><span><i class="dashed"></i>+30 line</span></div>`;
+    }
+    // Feeling chart (last 14 days)
+    const fc = $("#feelChart");
+    const days = lastNDays(14);
+    const feelByDay = {};
+    state.feelings.forEach(f=> feelByDay[dayKey(f.ts)] = f.value);
+    const series = days.map(d=>({label:d.short, value: feelByDay[d.key]!=null? feelByDay[d.key]: null}));
+    if(state.feelings.length===0){ fc.innerHTML = emptyChart("Tap a weather face on Today to start this."); }
+    else fc.innerHTML = lineChart(series);
+
+    // symptom / trigger ranks
+    $("#symptomRank").innerHTML = rankList(countField("symptoms"), "No symptoms logged yet.");
+    $("#triggerRank").innerHTML = rankList(countField("triggers"), "No triggers logged yet.");
+  }
+  function countField(field){
+    const counts={};
+    state.logs.forEach(l=> (l[field]||[]).forEach(s=> counts[s]=(counts[s]||0)+1));
+    return Object.entries(counts).sort((a,b)=> b[1]-a[1]).slice(0,6);
+  }
+  function rankList(entries, emptyMsg){
+    if(!entries.length) return `<div class="empty"><div>${emptyMsg}</div></div>`;
+    const max = entries[0][1];
+    return entries.map(([name,n])=>{
+      const pct = Math.round(n/max*100);
+      return `<div style="margin:10px 0">
+        <div class="row" style="margin-bottom:5px"><span style="font-weight:600;font-size:15px">${name}</span><span class="hint" style="font-variant-numeric:tabular-nums">${n}×</span></div>
+        <div style="height:10px;background:var(--surface-2);border-radius:6px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:6px"></div></div>
+      </div>`;
+    }).join("");
+  }
+  function relShort(ts){ return new Date(ts).toLocaleDateString(undefined,{month:"numeric",day:"numeric"}); }
+  function relShort2(ts){ return relShort(ts); }
+  function lastNDays(n){
+    const out=[]; for(let i=n-1;i>=0;i--){ const d=new Date(Date.now()-i*86400000);
+      out.push({key:d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(), short:(d.getMonth()+1)+"/"+d.getDate()}); }
+    return out;
+  }
+  function emptyChart(msg){
+    return `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 19V5M4 19h16" stroke-linecap="round"/><path d="M7 15l3.5-4 3 2.5L21 7" stroke-linecap="round" stroke-linejoin="round"/></svg><div>${msg}</div></div>`;
+  }
+
+  /* ---- hand-drawn SVG charts ---- */
+  function barChart(data, threshold){
+    const W=Math.max(300, data.length*54), H=200, pad={l:34,r:12,t:14,b:34};
+    const iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+    const maxV=Math.max(threshold+10, ...data.map(d=>d.value))*1.1;
+    const bw=Math.min(34, iw/data.length*0.6);
+    const step=iw/data.length;
+    const y=v=> pad.t+ih-(v/maxV*ih);
+    let bars="", labels="";
+    data.forEach((d,i)=>{
+      const cx=pad.l+step*i+step/2;
+      const yv=y(d.value); const h=pad.t+ih-yv;
+      const col=d.flag? "var(--watch)":"var(--accent)";
+      bars+=`<rect x="${cx-bw/2}" y="${yv}" width="${bw}" height="${Math.max(2,h)}" rx="4" fill="${col}"><title>+${d.value} bpm</title></rect>`;
+      bars+=`<text x="${cx}" y="${yv-6}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">+${d.value}</text>`;
+      labels+=`<text x="${cx}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--muted)">${d.label}</text>`;
+    });
+    const ty=y(threshold);
+    const grid=[0,15,30,45].filter(g=>g<=maxV).map(g=>`<line x1="${pad.l}" y1="${y(g)}" x2="${W-pad.r}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l-6}" y="${y(g)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${g}</text>`).join("");
+    return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Standing heart-rate jump per test">
+      ${grid}
+      <line x1="${pad.l}" y1="${ty}" x2="${W-pad.r}" y2="${ty}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 5"/>
+      ${bars}${labels}
+    </svg></div>`;
+  }
+
+  function lineChart(series){
+    const W=Math.max(320, series.length*24), H=180, pad={l:26,r:12,t:14,b:28};
+    const iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+    const x=i=> pad.l + (series.length<=1?iw/2: i/(series.length-1)*iw);
+    const y=v=> pad.t+ih-((v-1)/4*ih); // scale 1..5
+    const pts=series.map((s,i)=> s.value!=null?{x:x(i),y:y(s.value),v:s.value,i}:null).filter(Boolean);
+    let path="", dots="", area="";
+    if(pts.length){
+      path = pts.map((p,i)=> (i?"L":"M")+p.x+" "+p.y).join(" ");
+      area = `M${pts[0].x} ${pad.t+ih} `+pts.map(p=>`L${p.x} ${p.y}`).join(" ")+` L${pts[pts.length-1].x} ${pad.t+ih} Z`;
+      dots = pts.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===pts.length-1?5:3.5}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"><title>${p.v}/5</title></circle>`).join("");
+    }
+    const grid=[1,3,5].map(g=>`<line x1="${pad.l}" y1="${y(g)}" x2="${W-pad.r}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l-6}" y="${y(g)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${g}</text>`).join("");
+    const xlabels = series.map((s,i)=> (i%3===0)?`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="var(--muted)">${s.label}</text>`:"").join("");
+    return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily feeling over the last two weeks">
+      ${grid}
+      ${pts.length?`<path d="${area}" fill="var(--accent-soft)" opacity="0.6"/>`:""}
+      ${pts.length?`<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`:""}
+      ${dots}${xlabels}
+    </svg></div>${pts.length? "":'<p class="hint" style="text-align:center">No check-ins in this window yet.</p>'}`;
+  }
+
+  /* ---- health-data helpers & charts ---- */
+  function seriesFromMap(map, n){
+    const out=[];
+    for(let i=n-1;i>=0;i--){ const d=new Date(Date.now()-i*86400000);
+      const key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      out.push({key, label:(d.getMonth()+1)+"/"+d.getDate(), value: map[key]!=null? map[key] : null});
+    }
+    return out;
+  }
+  function numLineChart(data, opts){
+    opts=opts||{}; const dec=opts.decimals||0; const unit=opts.unit||"";
+    const vals=data.map(d=>d.value).filter(v=>v!=null);
+    if(!vals.length) return emptyChart("No data yet.");
+    let min=Math.min(...vals), max=Math.max(...vals);
+    if(min===max){ min-=1; max+=1; }
+    const padV=(max-min)*0.15; min-=padV; max+=padV;
+    const W=Math.max(320, data.length*22), H=180, pad={l:34,r:14,t:16,b:26};
+    const iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+    const x=i=> pad.l + (data.length<=1? iw/2 : i/(data.length-1)*iw);
+    const y=v=> pad.t+ih-((v-min)/(max-min)*ih);
+    const pts=data.map((d,i)=> d.value!=null?{x:x(i),y:y(d.value),v:d.value,i}:null).filter(Boolean);
+    let path="",area="",dots="";
+    if(pts.length){
+      path=pts.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
+      area="M"+pts[0].x.toFixed(1)+" "+(pad.t+ih).toFixed(1)+" "+pts.map(p=>"L"+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+" L"+pts[pts.length-1].x.toFixed(1)+" "+(pad.t+ih).toFixed(1)+" Z";
+      dots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i===pts.length-1?5:3}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"><title>${p.v.toFixed(dec)} ${unit}</title></circle>`).join("");
+    }
+    const gy=[max-(max-min)*0.05, (min+max)/2, min+(max-min)*0.05];
+    const grid=gy.map(g=>`<line x1="${pad.l}" y1="${y(g).toFixed(1)}" x2="${W-pad.r}" y2="${y(g).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l-6}" y="${(y(g)+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--muted)">${g.toFixed(dec)}</text>`).join("");
+    const stepL=Math.max(1,Math.ceil(data.length/6));
+    const xlabels=data.map((d,i)=> (i%stepL===0)?`<text x="${x(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.label}</text>`:"").join("");
+    const last=pts.length?pts[pts.length-1]:null;
+    const endLabel=last?`<text x="${(last.x-6).toFixed(1)}" y="${(last.y-9).toFixed(1)}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${last.v.toFixed(dec)}</text>`:"";
+    return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Values over time">${grid}${pts.length?`<path d="${area}" fill="var(--accent-soft)" opacity="0.55"/>`:""}${pts.length?`<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`:""}${dots}${endLabel}${xlabels}</svg></div>`;
+  }
+  function hoursBars(data){
+    const vals=data.map(d=>d.value).filter(v=>v!=null);
+    const maxV=Math.max(9, ...vals);
+    const W=Math.max(300, data.length*30), H=180, pad={l:24,r:10,t:14,b:26};
+    const iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+    const step=iw/data.length; const bw=Math.min(20, step*0.62);
+    const y=v=> pad.t+ih-(v/maxV*ih);
+    let bars="",labels="";
+    const stepL=Math.max(1,Math.ceil(data.length/7));
+    data.forEach((d,i)=>{
+      const cx=pad.l+step*i+step/2;
+      if(d.value!=null){
+        const yv=y(d.value); const hh=pad.t+ih-yv;
+        const col=d.value<6? "var(--watch)":"var(--accent)";
+        bars+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${yv.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2,hh).toFixed(1)}" rx="4" fill="${col}"><title>${d.value} h · ${d.label}</title></rect>`;
+      }
+      if(i%stepL===0) labels+=`<text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.label}</text>`;
+    });
+    const grid=[0,4,8].map(g=>`<line x1="${pad.l}" y1="${y(g).toFixed(1)}" x2="${W-pad.r}" y2="${y(g).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l-5}" y="${(y(g)+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--muted)">${g}</text>`).join("");
+    return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours of sleep per night">${grid}${bars}${labels}</svg></div><div class="legend"><span><i style="background:var(--accent)"></i>6h or more</span><span><i style="background:var(--watch)"></i>under 6h</span></div>`;
+  }
+  function healthInsights(){
+    const h=state.health; const out=[];
+    const feelByDay={}; state.feelings.forEach(f=> feelByDay[isoDay(f.ts)] = f.value);
+    const rough=[], good=[];
+    Object.keys(feelByDay).forEach(d=>{ if(feelByDay[d]<=2) rough.push(d); else if(feelByDay[d]>=4) good.push(d); });
+    const avg=(map,days)=>{ const v=days.map(d=>map[d]).filter(x=>x!=null); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
+    if(rough.length>=3 && good.length>=3){
+      const rr=avg(h.restingHR,rough), rg=avg(h.restingHR,good);
+      if(rr!=null && rg!=null){ const diff=Math.round(rr-rg);
+        if(Math.abs(diff)>=2) out.push({t:"Resting heart rate", m:`On your rougher days your resting heart rate ran about <strong>${Math.abs(diff)} bpm ${diff>0?'higher':'lower'}</strong> (${Math.round(rr)} vs ${Math.round(rg)} bpm on good days).`}); }
+      const sr=avg(h.sleepMin,rough), sg=avg(h.sleepMin,good);
+      if(sr!=null && sg!=null){ const diff=Math.round(sg-sr);
+        if(Math.abs(diff)>=20) out.push({t:"Sleep", m:`You slept about <strong>${fmtHrs(Math.abs(diff))} ${diff>0?'less':'more'}</strong> on rougher days (${fmtHrs(sr)} vs ${fmtHrs(sg)} on good days).`}); }
+      const hr=avg(h.hrv,rough), hg=avg(h.hrv,good);
+      if(hr!=null && hg!=null){ const diff=Math.round((hg-hr)*10)/10;
+        if(Math.abs(diff)>=2) out.push({t:"Heart-rate variability", m:`Your HRV (a recovery signal) was about <strong>${Math.abs(diff)} ms ${diff>0?'lower':'higher'}</strong> on rougher days. Lower HRV often means your body is under more strain.`}); }
+    }
+    return out;
+  }
+
+  /* ---- Fitbit import: read a .zip in the browser, no libraries, nothing leaves the phone ---- */
+  async function readZip(file){
+    const size=file.size, tailLen=Math.min(66000,size);
+    const tail=new DataView(await file.slice(size-tailLen,size).arrayBuffer());
+    let eo=-1;
+    for(let i=tail.byteLength-22;i>=0;i--){ if(tail.getUint32(i,true)===0x06054b50){ eo=i; break; } }
+    if(eo<0) throw new Error("not-zip");
+    const count=tail.getUint16(eo+10,true), cdSize=tail.getUint32(eo+12,true), cdOff=tail.getUint32(eo+16,true);
+    if(cdOff===0xFFFFFFFF||cdSize===0xFFFFFFFF||count===0xFFFF) throw new Error("zip64");
+    const cd=new DataView(await file.slice(cdOff,cdOff+cdSize).arrayBuffer());
+    const entries=[]; let p=0;
+    for(let n=0;n<count && p+46<=cd.byteLength;n++){
+      if(cd.getUint32(p,true)!==0x02014b50) break;
+      const method=cd.getUint16(p+10,true), compSize=cd.getUint32(p+20,true), uncompSize=cd.getUint32(p+24,true);
+      const nameLen=cd.getUint16(p+28,true), extraLen=cd.getUint16(p+30,true), commentLen=cd.getUint16(p+32,true);
+      const local=cd.getUint32(p+42,true);
+      const name=new TextDecoder().decode(new Uint8Array(cd.buffer, cd.byteOffset+p+46, nameLen));
+      entries.push({name, method, compSize, uncompSize, local});
+      p+=46+nameLen+extraLen+commentLen;
+    }
+    return {file, entries};
+  }
+  async function readEntry(zip,e){
+    const hd=new DataView(await zip.file.slice(e.local,e.local+30).arrayBuffer());
+    if(hd.getUint32(0,true)!==0x04034b50) throw new Error("bad-local");
+    const nameLen=hd.getUint16(26,true), extraLen=hd.getUint16(28,true);
+    const start=e.local+30+nameLen+extraLen;
+    const comp=await zip.file.slice(start,start+e.compSize).arrayBuffer();
+    let bytes;
+    if(e.method===0) bytes=new Uint8Array(comp);
+    else if(e.method===8){ const ds=new DecompressionStream("deflate-raw");
+      bytes=new Uint8Array(await new Response(new Blob([comp]).stream().pipeThrough(ds)).arrayBuffer()); }
+    else throw new Error("method");
+    return new TextDecoder().decode(bytes);
+  }
+  function normDate(s){ if(s==null) return null; s=String(s);
+    const m=s.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+"-"+m[2]+"-"+m[3];
+    const d=new Date(s); if(isNaN(d)) return null;
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function pRestingHR(data,h,c){ if(!Array.isArray(data)) return; data.forEach(it=>{ const d=normDate(it.dateTime||(it.value&&it.value.date)); let v=(it.value&&typeof it.value==="object")?it.value.value:it.value; v=Math.round(Number(v)); if(d&&v>25&&v<220){ h.restingHR[d]=v; c.restingHR++; } }); }
+  function pSleep(data,h,c){ const arr=Array.isArray(data)?data:(data&&data.sleep?data.sleep:null); if(!arr) return; arr.forEach(it=>{ const d=normDate(it.dateOfSleep||it.dateTime||it.startTime); let m=Number(it.minutesAsleep); if(!m&&it.duration) m=Math.round(it.duration/60000); if(d&&m>0&&m<1440){ if(m>(h.sleepMin[d]||0)) h.sleepMin[d]=m; c.sleepMin++; } }); }
+  function pHRV(data,h,c){ if(!Array.isArray(data)) return; data.forEach(it=>{ const d=normDate(it.dateTime||(it.value&&it.value.date)); const val=it.value&&(it.value.dailyRmssd!=null?it.value.dailyRmssd:it.value.rmssd); const n=Number(val); if(d&&n>0&&n<400){ h.hrv[d]=Math.round(n*10)/10; c.hrv++; } }); }
+  function pSteps(data,h,c){ if(!Array.isArray(data)) return; data.forEach(it=>{ const d=normDate(it.dateTime); const v=Number(it.value); if(d&&v>=0&&v<200000){ if(/\d{1,2}:\d{2}/.test(String(it.dateTime))) h.steps[d]=(h.steps[d]||0)+v; else h.steps[d]=v; c.steps++; } }); }
+  function classifyApply(name,data,h,c){ const ln=(name||"").toLowerCase();
+    if(ln.includes("resting")) pRestingHR(data,h,c);
+    else if(ln.includes("hrv")||ln.includes("variability")) pHRV(data,h,c);
+    else if(ln.includes("sleep")) pSleep(data,h,c);
+    else if(ln.includes("step")) pSteps(data,h,c);
+    else if(Array.isArray(data)&&data[0]){ const s=data[0];
+      if(s.dateOfSleep||s.minutesAsleep) pSleep(data,h,c);
+      else if(s.value&&s.value.dailyRmssd!=null) pHRV(data,h,c);
+      else if(s.value!=null) pRestingHR(data,h,c);
+    }
+  }
+  async function importFitbit(file){
+    const h=emptyHealth(); const c={restingHR:0,sleepMin:0,hrv:0,steps:0,files:0,skipped:0};
+    if(file.name.toLowerCase().endsWith(".json")){
+      let data; try{ data=JSON.parse(await file.text()); }catch(e){ throw new Error("not-json"); }
+      classifyApply(file.name,data,h,c); c.files++; return {health:h,counts:c};
+    }
+    if(typeof DecompressionStream==="undefined") throw new Error("no-decompress");
+    const zip=await readZip(file);
+    for(const e of zip.entries){
+      const ln=e.name.toLowerCase();
+      if(!ln.endsWith(".json")) continue;
+      const isResting=ln.includes("resting_heart_rate")||ln.includes("resting heart rate");
+      if(ln.includes("heart_rate")&&!isResting&&!ln.includes("variability")){ c.skipped++; continue; } // skip huge intraday HR
+      const isSleep=ln.includes("sleep")&&!ln.includes("score")&&!ln.includes("profile");
+      const isHRV=ln.includes("heart_rate_variability")||ln.includes("hrv");
+      const isSteps=ln.includes("steps");
+      if(!(isResting||isSleep||isHRV||isSteps)) continue;
+      if(e.uncompSize>8*1024*1024){ c.skipped++; continue; }
+      let text; try{ text=await readEntry(zip,e); }catch(err){ c.skipped++; continue; }
+      let data; try{ data=JSON.parse(text); }catch(err){ c.skipped++; continue; }
+      c.files++;
+      if(isResting) pRestingHR(data,h,c);
+      else if(isHRV) pHRV(data,h,c);
+      else if(isSleep) pSleep(data,h,c);
+      else if(isSteps) pSteps(data,h,c);
+    }
+    return {health:h,counts:c};
+  }
+  function mergeHealth(src){ ["restingHR","sleepMin","hrv","steps"].forEach(k=> Object.assign(state.health[k], src[k])); state.health.lastImport=Date.now(); }
+  async function doImportFitbit(file, close){
+    if(!file) return;
+    toast("Reading your Fitbit data…");
+    try{
+      const {health,counts}=await importFitbit(file);
+      if((counts.restingHR+counts.sleepMin+counts.hrv+counts.steps)===0){
+        toast("Couldn't find matching health data in that file."); return;
+      }
+      mergeHealth(health); save();
+      if(close) close();
+      nav("trends");
+      toast(`Imported ${countKeys(health.restingHR)} days heart rate · ${countKeys(health.sleepMin)} nights sleep.`);
+    }catch(err){
+      const map={ "zip64":"That export uses a newer zip format I can't read yet — let me know and I'll add it.",
+        "not-zip":"That didn't look like a .zip file. Pick the .zip from your export.",
+        "no-decompress":"This browser can't unzip files here — try opening Steady in Chrome.",
+        "not-json":"Couldn't read that file." };
+      toast(map[err&&err.message] || "Something went wrong reading that file.");
+    }
+  }
+
+  /* ---- native only: find the newest takeout-*.zip in Downloads and import it ---- */
+  function b64ToBytes(b64){ const bin=atob(b64); const n=bin.length; const u=new Uint8Array(n); for(let i=0;i<n;i++) u[i]=bin.charCodeAt(i); return u; }
+  async function findDownload(close){
+    const C=window.Capacitor, FS=C&&C.Plugins&&C.Plugins.Filesystem;
+    if(!FS){ toast("This works in the installed app only."); return; }
+    toast("Looking in your Downloads…");
+    try{ await FS.requestPermissions(); }catch(e){}
+    const dirs=["EXTERNAL_STORAGE","DOCUMENTS","EXTERNAL"];
+    let found=null, usedDir=null;
+    for(const dir of dirs){
+      try{
+        const list=await FS.readdir({path:"Download", directory:dir});
+        const files=(list.files||[]).map(f=> (typeof f==="string")?{name:f}:f);
+        const zips=files.filter(f=> /^takeout-.*\.zip$/i.test(f.name||""));
+        if(zips.length){ zips.sort((a,b)=> (Number(b.mtime)||0)-(Number(a.mtime)||0) || ((a.name<b.name)?1:-1)); found=zips[0]; usedDir=dir; break; }
+      }catch(e){ /* try next directory */ }
+    }
+    if(!found){ toast("No takeout file found in Downloads — tap ‘pick it myself’."); return; }
+    toast("Found "+found.name+" — importing…");
+    try{
+      const res=await FS.readFile({path:"Download/"+found.name, directory:usedDir});
+      const file=new File([b64ToBytes(res.data)], found.name);
+      if(close) close();
+      await doImportFitbit(file);
+    }catch(e){ toast("Found it but couldn't open it — tap ‘pick it myself’."); }
+  }
+
+  /* ---- native only: open a file picker and import the chosen file ---- */
+  async function pickAndImport(close){
+    const C=window.Capacitor;
+    if(!C){ toast("Capacitor not found."); return; }
+    const FP=C.Plugins&&C.Plugins.FilePickerPlugin;
+    if(!FP){ toast("FilePickerPlugin not available (try reinstalling the app)."); return; }
+    try{
+      toast("Opening file picker…");
+      const picked=await FP.pickFile();
+      if(!picked){ toast("No file selected."); return; }
+      if(!picked.uri){ toast("No URI returned. Got: "+JSON.stringify(picked).slice(0,80)); return; }
+      toast("Reading "+(picked.name||"file")+"…");
+      const readResult=await FP.readFileUri({uri:picked.uri});
+      if(!readResult||!readResult.data){ toast("Read returned no data."); return; }
+      const file=new File([b64ToBytes(readResult.data)], picked.name||"file");
+      if(close) close();
+      await doImportFitbit(file);
+    }catch(e){
+      if(e&&e.message&&e.message.toLowerCase().includes("dismiss")){ /* user cancelled */ }
+      else{ toast("Error: "+(e.message||e.toString()).slice(0,120)); }
+    }
+  }
+
+  /* ============ BACKUP / SETTINGS ============ */
+  $("#menuBtn").addEventListener("click", openMenu);
+  function openMenu(){
+    const teen = state.settings.ageGroup==="teen";
+    const wrap = document.createElement("div");
+    wrap.id="sheet";
+    wrap.style.cssText="position:fixed;inset:0;z-index:60;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center";
+    wrap.innerHTML = `
+      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)">
+        <div class="row"><h2 style="margin:0;font-size:19px">Your data</h2><button class="iconbtn" id="closeSheet" aria-label="Close">Close</button></div>
+        <p class="hint" style="margin:0">Everything stays private on this phone. Back up now and then so it's always safe.</p>
+        <button class="btn primary block" id="doBackup">Back up (download a file)</button>
+        <button class="btn ghost block" id="doRestore">Restore from a backup</button>
+        <input type="file" id="restoreFile" accept="application/json,.json" style="display:none">
+        <hr class="divider">
+        <div class="row"><span style="font-weight:600">Fitbit data</span>
+          <span class="hint">${countKeys(state.health.restingHR)} days · ${state.health.lastImport?relDay(state.health.lastImport):"not yet"}</span></div>
+        ${isNative?'<button class="btn primary block" id="findDownload">Find my download &amp; import</button>':''}
+        <button class="btn ${isNative?'subtle':'primary'} block" id="importFitbit">${isNative?'Or pick the file myself':'Import Fitbit data'}</button>
+        <input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">
+        <p class="hint" style="margin:0">Brings in resting heart rate, sleep and steps from your export — it stays on this phone, nothing is uploaded. <strong>Can't find the file?</strong> In the file box, tap search and type <strong>takeout</strong>.</p>
+        <hr class="divider">
+        <div class="row"><span style="font-weight:600">I'm under 19</span>
+          <button class="btn ${teen?'primary':'subtle'}" id="ageToggle" style="min-height:44px;padding:0 18px">${teen?'Yes':'No'}</button></div>
+        <p class="hint" style="margin:0">Changes the stand-test line to +40 bpm, which is what doctors use for teens.</p>
+        <hr class="divider">
+        <div class="row"><span style="font-weight:600">Totals</span>
+          <span class="hint">${state.standTests.length} tests · ${state.logs.length} logs · ${state.feelings.length} check-ins</span></div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close=()=> wrap.remove();
+    $("#closeSheet").addEventListener("click", close);
+    wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
+    $("#doBackup").addEventListener("click", backup);
+    $("#doRestore").addEventListener("click", ()=> $("#restoreFile").click());
+    $("#restoreFile").addEventListener("change", e=> restore(e, close));
+    $("#importFitbit").addEventListener("click", ()=> isNative ? pickAndImport(close) : $("#fitbitFile").click());
+    $("#fitbitFile").addEventListener("change", e=> doImportFitbit(e.target.files[0], close));
+    if(isNative){ const fd=$("#findDownload"); if(fd) fd.addEventListener("click", ()=> findDownload(close)); }
+    $("#ageToggle").addEventListener("click", ()=>{
+      state.settings.ageGroup = teen?"adult":"teen"; save(); close(); toast("Saved.");
+    });
+  }
+  function backup(){
+    const data = JSON.stringify(state,null,2);
+    const blob = new Blob([data],{type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date();
+    a.href=url; a.download=`steady-backup-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("Backup downloaded. Keep it somewhere safe.");
+  }
+  function restore(e, close){
+    const file = e.target.files[0]; if(!file) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if(!d||typeof d!=="object") throw 0;
+        state.standTests = d.standTests||[]; state.logs=d.logs||[]; state.feelings=d.feelings||[];
+        state.settings = d.settings||{ageGroup:"adult"};
+        state.health = Object.assign(emptyHealth(), d.health||{});
+        save(); if(close) close(); nav("today"); toast("Restored your data.");
+      }catch(err){ toast("That file didn't look like a Steady backup."); }
+    };
+    r.readAsText(file);
+  }
+
+  /* ---------- theme sync for redeploy safety ---------- */
+  // (viewer toggle sets data-theme; nothing to do here)
+
+  /* ---------- init ---------- */
+  renderToday();
+})();
+</script>
