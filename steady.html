@@ -1230,8 +1230,9 @@
         <div class="row"><span style="font-weight:600">Fitbit data</span>
           <span class="hint">${countKeys(state.health.restingHR)} days · ${state.health.lastImport?relDay(state.health.lastImport):"not yet"}</span></div>
         ${isNative?'<button class="btn primary block" id="findDownload">Find my download &amp; import</button>':''}
-        <button class="btn ${isNative?'subtle':'primary'} block" id="importFitbit">${isNative?'Or pick the file myself':'Import Fitbit data'}</button>
-        <input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">
+        ${isNative?'<label class="btn subtle block" id="pickFileLabel" style="display:block;text-align:center;cursor:pointer;position:relative">Pick the file myself<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer"></label>'}
+        ${!isNative?'<button class="btn primary block" id="importFitbit">Import Fitbit data</button>':''}
+        ${!isNative?'<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">':''}
         <p class="hint" style="margin:0">Brings in resting heart rate, sleep and steps from your export — it stays on this phone, nothing is uploaded. <strong>Can't find the file?</strong> In the file box, tap search and type <strong>takeout</strong>.</p>
         <hr class="divider">
         <div class="row"><span style="font-weight:600">I'm under 19</span>
@@ -1245,10 +1246,8 @@
     const close=()=> wrap.remove();
     $("#closeSheet").addEventListener("click", close);
     wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
-    $("#doBackup").addEventListener("click", backup);
-    $("#doRestore").addEventListener("click", ()=> $("#restoreFile").click());
     $("#restoreFile").addEventListener("change", e=> restore(e, close));
-    $("#importFitbit").addEventListener("click", ()=> isNative ? pickAndImport(close) : $("#fitbitFile").click());
+    if(!isNative){ const ib=$("#importFitbit"); if(ib) ib.addEventListener("click", ()=> $("#fitbitFile").click()); }
     $("#fitbitFile").addEventListener("change", e=> doImportFitbit(e.target.files[0], close));
     if(isNative){ const fd=$("#findDownload"); if(fd) fd.addEventListener("click", ()=> findDownload(close)); }
     $("#ageToggle").addEventListener("click", ()=>{
