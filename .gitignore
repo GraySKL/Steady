@@ -1,0 +1,7 @@
+# Personal data files
+takeout-*.zip
+*.json
+
+# OS files
+Thumbs.db
+.DS_Store
