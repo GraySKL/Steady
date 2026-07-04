@@ -1134,26 +1134,30 @@
   async function findDownload(close){
     const C=window.Capacitor, FS=C&&C.Plugins&&C.Plugins.Filesystem;
     if(!FS){ toast("This works in the installed app only."); return; }
-    toast("Looking in your Downloads…");
-    try{ await FS.requestPermissions(); }catch(e){}
+    toast("Requesting storage permission…");
+    try{ 
+      const perm=await FS.requestPermissions();
+      toast("Permission: "+JSON.stringify(perm).slice(0,80));
+    }catch(e){ toast("Permission error: "+e.message); return; }
     const dirs=["EXTERNAL_STORAGE","DOCUMENTS","EXTERNAL"];
     let found=null, usedDir=null;
     for(const dir of dirs){
       try{
         const list=await FS.readdir({path:"Download", directory:dir});
         const files=(list.files||[]).map(f=> (typeof f==="string")?{name:f}:f);
+        toast("Dir "+dir+": "+files.length+" files found");
         const zips=files.filter(f=> /^takeout-.*\.zip$/i.test(f.name||""));
         if(zips.length){ zips.sort((a,b)=> (Number(b.mtime)||0)-(Number(a.mtime)||0) || ((a.name<b.name)?1:-1)); found=zips[0]; usedDir=dir; break; }
-      }catch(e){ /* try next directory */ }
+      }catch(e){ toast("Dir "+dir+" failed: "+e.message); }
     }
-    if(!found){ toast("No takeout file found in Downloads — tap ‘pick it myself’."); return; }
+    if(!found){ toast("No takeout file found in Downloads — tap 'pick it myself'."); return; }
     toast("Found "+found.name+" — importing…");
     try{
       const res=await FS.readFile({path:"Download/"+found.name, directory:usedDir});
       const file=new File([b64ToBytes(res.data)], found.name);
       if(close) close();
       await doImportFitbit(file);
-    }catch(e){ toast("Found it but couldn't open it — tap ‘pick it myself’."); }
+    }catch(e){ toast("Found it but couldn't open it: "+e.message); }
   }
 
   /* ---- native only: open a file picker and import the chosen file ---- */
