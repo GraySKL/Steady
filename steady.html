@@ -1131,8 +1131,26 @@
 
   /* ---- native only: find the newest takeout-*.zip in Downloads and import it ---- */
   function b64ToBytes(b64){ const bin=atob(b64); const n=bin.length; const u=new Uint8Array(n); for(let i=0;i<n;i++) u[i]=bin.charCodeAt(i); return u; }
+  function bytesToB64(bytes){ let s=""; const CH=32768; for(let i=0;i<bytes.length;i+=CH){ s+=String.fromCharCode.apply(null, bytes.subarray(i,i+CH)); } return btoa(s); }
+  function getFP(){ const C=window.Capacitor; return C&&C.Plugins&&C.Plugins.FilePickerPlugin; }
+  // read a picked file through the native plugin in ~4MB chunks — a takeout zip
+  // can be >100MB, and one giant base64 string kills the WebView bridge
+  async function readNativeFile(FP, uri, size){
+    size = Number(size)||0;
+    if(!size){ const r=await FP.readFileUri({uri}); return b64ToBytes(r.data||""); }
+    const CHUNK=4*1024*1024;
+    const out=new Uint8Array(size);
+    let off=0;
+    while(off<size){
+      const r=await FP.readFileChunk({uri, offset:off, length:Math.min(CHUNK,size-off)});
+      const bytes=b64ToBytes(r&&r.data||"");
+      if(!bytes.length) break;
+      out.set(bytes,off); off+=bytes.length;
+    }
+    return (off===size)? out : out.subarray(0,off);
+  }
   async function findDownload(close){
-    const C=window.Capacitor, FP=C&&C.Plugins&&C.Plugins.FilePickerPlugin;
+    const C=window.Capacitor, FP=getFP();
     if(!FP){ toast("This works in the installed app only."); return; }
     // Check if "All files access" permission is granted
     try{
@@ -1156,17 +1174,19 @@
         if(zips.length){ zips.sort((a,b)=> (Number(b.mtime)||0)-(Number(a.mtime)||0) || ((a.name<b.name)?1:-1)); found=zips[0]; usedDir=dir; break; }
       }catch(e){ /* try next directory */ }
     }
-    if(!found){ toast("No takeout file found in Downloads — tap 'pick it myself'."); return; }
+    if(!found){ toast("No takeout file found in Downloads — tap 'Import Fitbit data' and pick it."); return; }
     toast("Found "+found.name+" — importing…");
     try{
-      const res=await FS.readFile({path:"Download/"+found.name, directory:usedDir});
-      const file=new File([b64ToBytes(res.data)], found.name);
+      const bytes = found.uri ? await readNativeFile(FP, found.uri, found.size)
+        : b64ToBytes((await FS.readFile({path:"Download/"+found.name, directory:usedDir})).data);
+      const file=new File([bytes], found.name);
       if(close) close();
       await doImportFitbit(file);
     }catch(e){ toast("Found it but couldn't open it: "+e.message); }
   }
 
   function showPermissionBanner(close){
+    const FP=getFP();
     const wrap=document.createElement("div");
     wrap.style.cssText="position:fixed;inset:0;z-index:70;background:rgba(10,20,18,.6);display:flex;align-items:center;justify-content:center;padding:24px";
     wrap.innerHTML=`
@@ -1191,25 +1211,32 @@
 
   /* ---- native only: open a file picker and import the chosen file ---- */
   async function pickAndImport(close){
-    const C=window.Capacitor;
-    if(!C){ toast("Capacitor not found."); return; }
-    const FP=C.Plugins&&C.Plugins.FilePickerPlugin;
+    const FP=getFP();
     if(!FP){ toast("FilePickerPlugin not available (try reinstalling the app)."); return; }
     try{
-      toast("Opening file picker…");
       const picked=await FP.pickFile();
-      if(!picked){ toast("No file selected."); return; }
-      if(!picked.uri){ toast("No URI returned. Got: "+JSON.stringify(picked).slice(0,80)); return; }
+      if(!picked||!picked.uri) return; /* cancelled */
       toast("Reading "+(picked.name||"file")+"…");
-      const readResult=await FP.readFileUri({uri:picked.uri});
-      if(!readResult||!readResult.data){ toast("Read returned no data."); return; }
-      const file=new File([b64ToBytes(readResult.data)], picked.name||"file");
+      const bytes=await readNativeFile(FP, picked.uri, picked.size);
+      if(!bytes.length){ toast("That file looked empty — try picking it again."); return; }
+      const file=new File([bytes], picked.name||"file");
       if(close) close();
       await doImportFitbit(file);
     }catch(e){
-      if(e&&e.message&&e.message.toLowerCase().includes("dismiss")){ /* user cancelled */ }
-      else{ toast("Error: "+(e.message||e.toString()).slice(0,120)); }
+      toast("Error: "+(e.message||e.toString()).slice(0,120));
     }
+  }
+
+  /* ---- native only: restore a backup via the native picker ---- */
+  async function restoreNative(close){
+    const FP=getFP();
+    if(!FP){ toast("File picker not available (try reinstalling the app)."); return; }
+    try{
+      const picked=await FP.pickFile();
+      if(!picked||!picked.uri) return; /* cancelled */
+      const bytes=await readNativeFile(FP, picked.uri, picked.size);
+      restoreFromFile(new File([bytes], picked.name||"backup.json"), close);
+    }catch(e){ toast("Couldn't read that file: "+(e.message||e)); }
   }
 
   /* ============ BACKUP / SETTINGS ============ */
@@ -1229,8 +1256,8 @@
         <hr class="divider">
         <div class="row"><span style="font-weight:600">Fitbit data</span>
           <span class="hint">${countKeys(state.health.restingHR)} days · ${state.health.lastImport?relDay(state.health.lastImport):"not yet"}</span></div>
-        ${isNative?'<button class="btn primary block" id="findDownload">Find my download &amp; import</button>':''}
-        ${isNative?'<label class="btn subtle block" id="pickFileLabel" style="display:block;text-align:center;cursor:pointer;position:relative">Pick the file myself<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer"></label>'}
+        ${isNative?'<button class="btn primary block" id="pickFile">Import Fitbit data</button>':''}
+        ${isNative?'<button class="btn subtle block" id="findDownload">Find my download for me</button>':''}
         ${!isNative?'<button class="btn primary block" id="importFitbit">Import Fitbit data</button>':''}
         ${!isNative?'<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">':''}
         <p class="hint" style="margin:0">Brings in resting heart rate, sleep and steps from your export — it stays on this phone, nothing is uploaded. <strong>Can't find the file?</strong> In the file box, tap search and type <strong>takeout</strong>.</p>
@@ -1246,26 +1273,42 @@
     const close=()=> wrap.remove();
     $("#closeSheet").addEventListener("click", close);
     wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
-    $("#restoreFile").addEventListener("change", e=> restore(e, close));
-    if(!isNative){ const ib=$("#importFitbit"); if(ib) ib.addEventListener("click", ()=> $("#fitbitFile").click()); }
-    $("#fitbitFile").addEventListener("change", e=> doImportFitbit(e.target.files[0], close));
-    if(isNative){ const fd=$("#findDownload"); if(fd) fd.addEventListener("click", ()=> findDownload(close)); }
+    $("#doBackup").addEventListener("click", backup);
+    $("#doRestore").addEventListener("click", ()=>{ if(isNative) restoreNative(close); else $("#restoreFile").click(); });
+    $("#restoreFile").addEventListener("change", e=> restoreFromFile(e.target.files[0], close));
+    if(!isNative){
+      $("#importFitbit").addEventListener("click", ()=> $("#fitbitFile").click());
+      $("#fitbitFile").addEventListener("change", e=> doImportFitbit(e.target.files[0], close));
+    }else{
+      $("#pickFile").addEventListener("click", ()=> pickAndImport(close));
+      $("#findDownload").addEventListener("click", ()=> findDownload(close));
+    }
     $("#ageToggle").addEventListener("click", ()=>{
       state.settings.ageGroup = teen?"adult":"teen"; save(); close(); toast("Saved.");
     });
   }
-  function backup(){
+  async function backup(){
     const data = JSON.stringify(state,null,2);
+    const d = new Date();
+    const name = `steady-backup-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+    const FP = isNative && getFP();
+    if(FP && FP.saveToDownloads){
+      // blob-link downloads do nothing inside the app's WebView — save natively instead
+      try{
+        await FP.saveToDownloads({name, mime:"application/json", data:bytesToB64(new TextEncoder().encode(data))});
+        toast("Backup saved to your Downloads folder as "+name+".");
+      }catch(e){ toast("Couldn't save the backup: "+(e.message||e)); }
+      return;
+    }
     const blob = new Blob([data],{type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const d = new Date();
-    a.href=url; a.download=`steady-backup-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+    a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     toast("Backup downloaded. Keep it somewhere safe.");
   }
-  function restore(e, close){
-    const file = e.target.files[0]; if(!file) return;
+  function restoreFromFile(file, close){
+    if(!file) return;
     const r = new FileReader();
     r.onload = ()=>{
       try{

@@ -1,6 +1,6 @@
 # Steady — Standalone Android App: Handoff
 
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-04 (fix round 2)
 **Goal:** Turn the Steady health app into a real installed Android app that lives entirely on Sara's phone — works offline, no link, not connected to anything external. Plus a **"Find my download"** button that auto-imports the newest `takeout-*.zip` from the phone's Downloads.
 
 ---
@@ -10,23 +10,27 @@
 **Done ✅**
 - Java (JDK 17), Android SDK, and all build tools installed
 - Capacitor app created, full Steady app bundled inside
-- App built, installed, and running on Sara's phone
-- All app features work (trends, stand tests, logs, feelings, backup/restore)
+- App v1.0 built, installed, and running on Sara's phone
 - Git repos set up for both source and Android project
-- Build smoke test script (`test-build.ps1`) catches duplicate methods and build failures
+- Build smoke test script (`test-build.ps1`): JS syntax check + duplicate-method check + build
+- **v1.1 APK built (2026-07-04) with the import fix — awaiting install + test on the phone**
 
-**Blocked 🚧 — File import on Android**
-The **"Import Fitbit data"** feature does not work on the Android app. The app runs fine, but picking/importing a Fitbit export file fails silently. Multiple approaches tried:
-1. **Hidden `<input type="file">` triggered by JavaScript** — Android WebViews block programmatic file picker triggers
-2. **Custom native Capacitor plugin** (`FilePickerPlugin.java`) — plugin registration issues, buttons stopped working entirely
-3. **Inline invisible file input inside a `<label>`** — current approach, still doesn't trigger the file chooser
+**Fixed 🔧 (2026-07-04, v1.1) — the import saga, actual root causes:**
+The earlier diagnosis ("WebView doesn't support file inputs") was wrong. Three real bugs:
+1. **`FilePickerPlugin` was never registered.** It was missing the `@CapacitorPlugin(name=...)` annotation (Capacitor 6 logs an error and silently skips such plugins) and was registered in `onStart()` — too late; Capacitor injects plugin JS proxies at page load. Now: annotated, and registered in `MainActivity.onCreate()` **before** `super.onCreate()`. Also switched to Capacitor 6's proper `startActivityForResult(call, intent, "pickFileResult")` + `@ActivityCallback` instead of the static `onActivityResult` hack.
+2. **The last edit round left a JS syntax error** in `steady.html` (a `${isNative?'...'}` ternary missing its `:''` branch at the import-label line) — the whole script failed to parse, so *every* button died. That's what "buttons stopped working entirely" was. `test-build.ps1` now extracts the `<script>` and runs `node --check` so this can never ship again.
+3. **That same edit deleted the `#doBackup`/`#doRestore` click wiring** — restored.
 
-**Root cause:** Capacitor's WebView on Android does not support `<input type="file">` reliably. The WebView's `WebChromeClient` (which handles file chooser dialogs) may not be configured to show the picker. This is a known Capacitor/Android limitation.
+Plus hardening while in there:
+- **Chunked file reads** (`readFileChunk`, 4 MB per bridge hop): Sara's takeout zip is 119 MB; one giant base64 string through the Capacitor bridge would OOM/fail. `pickAndImport`, `restoreNative`, and `findDownload` all use it.
+- **Native Backup**: blob-anchor downloads do nothing in a WebView, so on-device backups now save via `saveToDownloads` (MediaStore.Downloads — needs **no permission** on Android 10+). Web version keeps the blob download.
+- **Native Restore**: uses the same native picker (system file dialog needs no storage permission).
+- **`INTERNET` permission removed** from the manifest — OS-level proof the app can't phone home.
+- `versionCode` 2 / `versionName` 1.1. Fixed `FP` out-of-scope ReferenceError in `showPermissionBanner`.
 
 **Remaining ⏳**
-1. Fix file import on Android (see *Known issues* below for approaches)
-2. Test "Find my download" button (requires `MANAGE_EXTERNAL_STORAGE` permission — greyed out on Sara's phone, likely a device-level restriction)
-3. Remove `INTERNET` permission from manifest (currently Capacitor default, not needed)
+1. Install v1.1 APK on Sara's phone, test: Import Fitbit data (picker), Backup (should land in Downloads), Restore
+2. "Find my download" still gated on the All-files-access permission (greyed out on her phone — device restriction). The picker path doesn't need it, so this is now a nice-to-have.
 
 ---
 
@@ -81,26 +85,17 @@ Set-Location android
 
 ## Known issues
 
-### File import doesn't work on Android (blocking)
-`<input type="file">` does not trigger a file chooser in Capacitor's Android WebView. Approaches tried:
-- **Programmatic `.click()` on hidden input** — blocked by Android WebView
-- **Custom native plugin** (`FilePickerPlugin.java` with `Intent.ACTION_GET_CONTENT`) — plugin registration crashes or fails silently
-- **Invisible input inside `<label>`** — still doesn't trigger chooser
-- **`@capacitor-community/file-picker` npm package** — package not found on npm
-
-**Possible fixes for next attempt:**
-- Configure Capacitor WebView's `WebChromeClient` to handle file chooser requests (may require custom `WebViewEngine`)
-- Use `cordova-plugin-file-opener2` or similar Cordova plugin via Capacitor's Cordova bridge
-- Accept that import requires the web version (desktop Chrome) and use Backup/Restore to transfer data to the phone app
-
 ### "Find my download" requires MANAGE_EXTERNAL_STORAGE
-The `MANAGE_EXTERNAL_STORAGE` permission is in the manifest but **greyed out** on Sara's phone — the device manufacturer likely blocks this permission. This button won't work until the permission can be granted, or until the file import issue above is resolved (the native file picker doesn't need this permission).
+The `MANAGE_EXTERNAL_STORAGE` permission is in the manifest but **greyed out** on Sara's phone — the device manufacturer likely blocks this permission. The main **Import Fitbit data** button uses the system file picker instead, which needs no storage permission at all.
+
+### (Resolved 2026-07-04) File import on Android
+Was blocking; root causes were plugin-registration bugs and a JS syntax error, not a WebView limitation — see *Fixed 🔧* above. Native picker flow: `pickAndImport()` → `FilePickerPlugin.pickFile` (ACTION_GET_CONTENT) → `readFileChunk` loop → existing `doImportFitbit()`.
 
 ---
 
 ## Notes
 
-- **Privacy:** the app makes **no network calls** (all data stays on-device). The `INTERNET` permission is Capacitor's default and can be removed.
+- **Privacy:** the app makes **no network calls** (all data stays on-device). The `INTERNET` permission was removed in v1.1, so the OS itself blocks any network access.
 - **Data:** app data lives per-device. Sara's 3 years of Fitbit data was imported into **desktop Chrome's** copy. On the phone app, re-import the same Takeout `.zip` (or use Backup → Restore) to load it there.
 - **Data size:** 3 years of Fitbit data = ~77 KB stored in localStorage. The app already filters at import time, keeping only resting HR, sleep, HRV, and steps (one value per day each).
 
