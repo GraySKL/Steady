@@ -2,6 +2,9 @@
 takeout-*.zip
 *.json
 
+# Built app packages (rebuilt from steady-android)
+*.apk
+
 # OS files
 Thumbs.db
 .DS_Store

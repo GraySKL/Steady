@@ -77,9 +77,15 @@ Set-Location android
 
 ## To install on the phone (for Sara)
 
-1. Get **`app-debug.apk`** onto your phone — upload to **Google Drive**, then open on phone.
-2. Tap the file → **allow installing unknown apps** → install.
+The ready-to-install file is **`Steady-v1.1.apk`**, sitting in this folder (`Documents\Health App`). It's the same file as `app-debug.apk` below, just renamed.
+
+1. On the computer: open **drive.google.com**, go to the **Health App** folder, and drag **`Steady-v1.1.apk`** into it.
+   (Claude tried to do this upload automatically on 2026-07-04 but the browser tooling couldn't hand the file to Drive — has to be done by hand for now.)
+2. On the phone: open **Google Drive** → tap **Steady-v1.1.apk** → **allow installing unknown apps** if asked → install. It updates the existing Steady app in place; **your data stays**.
 3. **Force-close the app** (swipe away from recents) after installing, then reopen.
+4. Check the version took: the import button in **Backup** should now say **"Import Fitbit data"** with **"Find my download for me"** under it.
+
+**Note:** neither git repo has a remote — commits are local-only on this PC.
 
 ---
 
