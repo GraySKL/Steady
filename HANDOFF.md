@@ -8,17 +8,25 @@
 ## Where we are (status)
 
 **Done ✅**
-- Java (JDK 17), Android SDK, and all build tools installed on this computer
-- Capacitor app project created, with the full Steady app bundled inside it
-- Storage permissions + the native "Find my download" button added
-- Project synced and ready to build
+- Java (JDK 17), Android SDK, and all build tools installed
+- Capacitor app created, full Steady app bundled inside
+- App built, installed, and running on Sara's phone
+- All app features work (trends, stand tests, logs, feelings, backup/restore)
+- Git repos set up for both source and Android project
+- Build smoke test script (`test-build.ps1`) catches duplicate methods and build failures
+
+**Blocked 🚧 — File import on Android**
+The **"Import Fitbit data"** feature does not work on the Android app. The app runs fine, but picking/importing a Fitbit export file fails silently. Multiple approaches tried:
+1. **Hidden `<input type="file">` triggered by JavaScript** — Android WebViews block programmatic file picker triggers
+2. **Custom native Capacitor plugin** (`FilePickerPlugin.java`) — plugin registration issues, buttons stopped working entirely
+3. **Inline invisible file input inside a `<label>`** — current approach, still doesn't trigger the file chooser
+
+**Root cause:** Capacitor's WebView on Android does not support `<input type="file">` reliably. The WebView's `WebChromeClient` (which handles file chooser dialogs) may not be configured to show the picker. This is a known Capacitor/Android limitation.
 
 **Remaining ⏳**
-1. Run the final build to produce the app file (`app-debug.apk`)
-2. Copy that file to the phone and install it
-3. Test on the phone (import + the Find-my-download button)
-
-> **The build was paused right before step 1.** Everything is saved. Nothing is lost.
+1. Fix file import on Android (see *Known issues* below for approaches)
+2. Test "Find my download" button (requires `MANAGE_EXTERNAL_STORAGE` permission — greyed out on Sara's phone, likely a device-level restriction)
+3. Remove `INTERNET` permission from manifest (currently Capacitor default, not needed)
 
 ---
 
@@ -27,72 +35,82 @@
 | What | Path |
 |---|---|
 | **Source app (single source of truth)** | `C:\Users\saral\Documents\Health App\steady.html` |
-| Web/artifact version (same code) | https://claude.ai/code/artifact/ae9a68f5-80e4-449a-891b-759ea11c1b26 |
 | **Android build project** | `C:\Users\saral\steady-android` |
-| App code bundled into project | `C:\Users\saral\steady-android\www\index.html` |
-| Android manifest (permissions) | `C:\Users\saral\steady-android\android\app\src\main\AndroidManifest.xml` |
-| **APK will appear at** | `C:\Users\saral\steady-android\android\app\build\outputs\apk\debug\app-debug.apk` |
+| **APK appears at** | `C:\Users\saral\steady-android\android\app\build\outputs\apk\debug\app-debug.apk` |
 | Java (JDK 17) | `C:\Users\saral\android-dev\jdk\jdk-17.0.19+10` |
 | Android SDK | `C:\Users\saral\android-dev\android-sdk` |
+
+**Git repos:**
+- Source: `C:\Users\saral\Documents\Health App` (branch: `master`)
+- Android: `C:\Users\saral\steady-android` (branch: `main`)
 
 **App details:** name `Steady`, id `com.sara.steady`, Capacitor 6, `@capacitor/filesystem` 6.0.4.
 
 ---
 
-## To finish the build (for a future session / technical)
+## To rebuild (technical)
 
-The tool paths are **not** in the system PATH — the build environment must set them each run. Run in PowerShell:
+Quick rebuild with smoke test:
+```powershell
+cd C:\Users\saral\steady-android
+.\test-build.ps1
+```
 
+Full manual build in PowerShell:
 ```powershell
 $dev = "C:\Users\saral\android-dev"
 $env:JAVA_HOME = "$dev\jdk\jdk-17.0.19+10"
 $env:ANDROID_SDK_ROOT = "$dev\android-sdk"
 $env:ANDROID_HOME = "$dev\android-sdk"
-Set-Location "C:\Users\saral\steady-android\android"
-& ".\gradlew.bat" assembleDebug --no-daemon
-```
-
-- **First build is slow** (downloads Gradle + dependencies, several minutes). Later builds are fast.
-- Success = a `BUILD SUCCESSFUL` line and the APK at the path in the table above.
-- `local.properties` is already written with the SDK path.
-
-### If the app source changes later
-Re-bundle before rebuilding:
-```powershell
 Copy-Item "C:\Users\saral\Documents\Health App\steady.html" "C:\Users\saral\steady-android\www\index.html" -Force
 Set-Location "C:\Users\saral\steady-android"
 npx --yes cap sync android
+Set-Location android
+& ".\gradlew.bat" assembleDebug --no-daemon
 ```
-Then run the build block above.
 
 ---
 
-## To install on the phone (for Sara — one step at a time)
+## To install on the phone (for Sara)
 
-1. Get **`app-debug.apk`** onto your phone — easiest is to upload it to **Google Drive**, then open it on your phone.
-2. Tap the file. Android will ask to **allow installing unknown apps** — say yes (it's your own app).
-3. Install it. **Steady** appears in your apps like any other. 💚
-
-*(This is a normal, safe step for a personal app — it's just not coming from the Play Store.)*
+1. Get **`app-debug.apk`** onto your phone — upload to **Google Drive**, then open on phone.
+2. Tap the file → **allow installing unknown apps** → install.
+3. **Force-close the app** (swipe away from recents) after installing, then reopen.
 
 ---
 
-## Notes & honest caveats
+## Known issues
 
-- **Not tested on a real phone yet.** The build should work; behaviour on the actual device (especially the download-finding) may need a tweak. Expect maybe one round of fixes.
-- **"Find my download" button** (native only — hidden in the web version):
-  - It scans the phone's **Downloads** for the newest `takeout-*.zip` and imports it automatically.
-  - Android's file rules are strict. On newer Android it may need a **one-time toggle**: Settings → Apps → **Steady** → Permissions → **allow access to all files**.
-  - If it can't read Downloads, it **falls back** to the normal file picker ("Or pick the file myself") — so import always works either way.
-- **Privacy:** the app makes **no network calls** in its code (all data stays on-device). The `INTERNET` permission is Capacitor's default; once we confirm the app runs, we can remove it to make it provably offline.
-- **Data note:** app data lives per-device. Sara's 3 years of Fitbit data was imported into **desktop Chrome's** copy. On the phone app, re-import the same Takeout `.zip` (or use Backup → Restore) to load it there.
+### File import doesn't work on Android (blocking)
+`<input type="file">` does not trigger a file chooser in Capacitor's Android WebView. Approaches tried:
+- **Programmatic `.click()` on hidden input** — blocked by Android WebView
+- **Custom native plugin** (`FilePickerPlugin.java` with `Intent.ACTION_GET_CONTENT`) — plugin registration crashes or fails silently
+- **Invisible input inside `<label>`** — still doesn't trigger chooser
+- **`@capacitor-community/file-picker` npm package** — package not found on npm
+
+**Possible fixes for next attempt:**
+- Configure Capacitor WebView's `WebChromeClient` to handle file chooser requests (may require custom `WebViewEngine`)
+- Use `cordova-plugin-file-opener2` or similar Cordova plugin via Capacitor's Cordova bridge
+- Accept that import requires the web version (desktop Chrome) and use Backup/Restore to transfer data to the phone app
+
+### "Find my download" requires MANAGE_EXTERNAL_STORAGE
+The `MANAGE_EXTERNAL_STORAGE` permission is in the manifest but **greyed out** on Sara's phone — the device manufacturer likely blocks this permission. This button won't work until the permission can be granted, or until the file import issue above is resolved (the native file picker doesn't need this permission).
+
+---
+
+## Notes
+
+- **Privacy:** the app makes **no network calls** (all data stays on-device). The `INTERNET` permission is Capacitor's default and can be removed.
+- **Data:** app data lives per-device. Sara's 3 years of Fitbit data was imported into **desktop Chrome's** copy. On the phone app, re-import the same Takeout `.zip` (or use Backup → Restore) to load it there.
+- **Data size:** 3 years of Fitbit data = ~77 KB stored in localStorage. The app already filters at import time, keeping only resting HR, sleep, HRV, and steps (one value per day each).
 
 ---
 
 ## The "why" behind key choices
-- **Capacitor bundles the HTML inside the APK** (not a URL wrapper / TWA), so the app is truly standalone and offline — matching Sara's "not connected to anything" requirement.
-- **Debug APK** (debug-signed) so it can be sideloaded without a Play Store / signing-key setup.
-- Build paths use **no spaces** (`steady-android`, `android-dev`) because Android/Gradle builds choke on spaces (the `Documents\Health App` folder has one).
+
+- **Capacitor bundles the HTML inside the APK** (not a URL wrapper / TWA), so the app is truly standalone and offline.
+- **Debug APK** (debug-signed) so it can be sideloaded without Play Store / signing-key setup.
+- Build paths use **no spaces** (`steady-android`, `android-dev`) because Android/Gradle builds choke on spaces.
 
 ---
 
@@ -116,7 +134,7 @@ New-Item -ItemType Directory -Force "$sdk\cmdline-tools" | Out-Null
 Move-Item "$dev\cmdtools\cmdline-tools" "$sdk\cmdline-tools\latest" -Force
 ```
 
-**3. Accept licenses (write hash files — the reliable way) + install packages:**
+**3. Accept licenses + install packages:**
 ```powershell
 $env:JAVA_HOME="$dev\jdk\jdk-17.0.19+10"
 $lic="$sdk\licenses"; New-Item -ItemType Directory -Force $lic | Out-Null
@@ -136,8 +154,6 @@ Copy-Item "C:\Users\saral\Documents\Health App\steady.html" "$proj\www\index.htm
 npx --yes cap init "Steady" "com.sara.steady" --web-dir www
 npx --yes cap add android
 ```
-Then **re-apply the two manifest edits** (see the *Notes & caveats* section: `requestLegacyExternalStorage="true"` on `<application>`, and the `READ_EXTERNAL_STORAGE` + `MANAGE_EXTERNAL_STORAGE` permissions), write `android\local.properties` with `sdk.dir=C:/Users/saral/android-dev/android-sdk`, run `npx cap sync android`, then the build block at the top.
+Then **re-apply the two manifest edits** (`requestLegacyExternalStorage="true"` on `<application>`, and `READ_EXTERNAL_STORAGE` + `MANAGE_EXTERNAL_STORAGE` permissions), write `android\local.properties` with `sdk.dir=C:/Users/saral/android-dev/android-sdk`, run `npx cap sync android`, then the build block above.
 
 **Installed versions (reference):** JDK Temurin 17.0.19 · build-tools 34.0.0 · platform-tools 37.0.0 · platforms;android-34 · Capacitor 6 · @capacitor/filesystem 6.0.4 · cmdline-tools 12.0.
-
-> Note: the `Find my download` button lives in the **source** `steady.html` (gated by an `isNative` check) — it is already there, so a rebuild picks it up automatically once `steady.html` is copied into `www`.
