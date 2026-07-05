@@ -98,6 +98,47 @@
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     padding:18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:14px;
   }
+
+  /* ---------- Disclaimer Modal ---------- */
+  #disclaimerOverlay{
+    position:fixed; inset:0; z-index:100;
+    background:rgba(10,20,18,.85); backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  #disclaimerOverlay.hidden{display:none}
+  .disclaimerModal{
+    background:var(--surface); border-radius:var(--radius);
+    padding:28px; max-width:500px; width:100%;
+    box-shadow:0 20px 40px rgba(0,0,0,.3);
+    display:flex; flex-direction:column; gap:20px;
+    max-height:85vh; overflow-y:auto;
+  }
+  .disclaimerModal h2{
+    margin:0; font-size:22px; font-weight:700; color:var(--flare);
+  }
+  .disclaimerModal .disclaimer-content{
+    font-size:15px; line-height:1.6; color:var(--ink);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .disclaimerModal .disclaimer-content strong{
+    color:var(--flare); font-weight:700;
+  }
+  .disclaimerModal ul{
+    margin:0; padding-left:20px; color:var(--ink-2);
+  }
+  .disclaimerModal li{margin:6px 0; font-size:14px; line-height:1.5}
+  .disclaimerModal .btn-group{
+    display:flex; gap:12px; flex-direction:column;
+  }
+  .disclaimerModal .btn-group button{
+    padding:16px; border-radius:var(--radius-sm); font-size:16px; font-weight:600;
+    border:none; cursor:pointer; transition:all .2s;
+  }
+  .disclaimerModal .btn-agree{
+    background:var(--accent); color:white;
+  }
+  .disclaimerModal .btn-agree:active{transform:scale(.97)}
   .card h2{font-size:17px; margin:0; font-weight:700; letter-spacing:-.01em}
   .card .hint{color:var(--muted); font-size:14.5px; margin:0}
 
@@ -452,6 +493,33 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<div id="disclaimerOverlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
+  <div class="disclaimerModal">
+    <h2 id="disclaimerTitle">⚠️ Important Legal Notice</h2>
+    <div class="disclaimer-content">
+      <p><strong>Steady is NOT a medical device and does NOT provide medical advice.</strong></p>
+      <p>By using Steady, you agree that:</p>
+      <ul>
+        <li>This app is for <strong>personal health tracking only</strong></li>
+        <li>POTS stand test results are <strong>not a diagnosis</strong> — only a personal reference</li>
+        <li>You will <strong>always consult a healthcare provider</strong> for health concerns, diagnosis, or treatment</li>
+        <li>Steady is <strong>not a substitute</strong> for professional medical care</li>
+        <li>This app makes <strong>no warranties</strong> about accuracy or reliability</li>
+        <li>Your data stays on your phone; <strong>you are responsible for keeping backups safe</strong></li>
+      </ul>
+      <p><strong>In emergencies, call emergency services (911) — do not wait for the app.</strong></p>
+      <p style="font-size:13px; color:var(--muted); margin-top:8px">
+        For complete legal terms, see the DOCUMENTATION.md file.
+      </p>
+    </div>
+    <div class="btn-group">
+      <button class="btn-agree btn primary block" id="disclaimerAgree">
+        I understand and agree
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -480,6 +548,26 @@
     }catch(e){ return defaultState(); }
   }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast("Couldn't save — try Backup to keep your data safe."); } }
+
+  /* ---------- Disclaimer modal ---------- */
+  function showDisclaimer(){
+    const overlay = $("#disclaimerOverlay");
+    overlay.classList.remove("hidden");
+    const agreeBtn = $("#disclaimerAgree");
+    agreeBtn.addEventListener("click", ()=>{
+      state.settings.disclaimerAgreed = true;
+      save();
+      overlay.classList.add("hidden");
+      renderToday();
+    });
+  }
+  function checkDisclaimer(){
+    if(!state.settings.disclaimerAgreed){
+      showDisclaimer();
+      return false;
+    }
+    return true;
+  }
 
   function toast(msg){
     const t = $("#toast"); t.textContent = msg; t.classList.add("show");
@@ -1327,6 +1415,8 @@
   // (viewer toggle sets data-theme; nothing to do here)
 
   /* ---------- init ---------- */
-  renderToday();
+  if(checkDisclaimer()){
+    renderToday();
+  }
 })();
 </script>
