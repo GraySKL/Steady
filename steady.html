@@ -1,3 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Steady — POTS &amp; EDS Symptom Tracker</title>
+  <meta name="description" content="Private, offline symptom tracker for POTS, dysautonomia, and EDS. Stand tests, symptom logs, and trends — your data never leaves your device.">
+  <meta name="theme-color" content="#0E8C79" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1518" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Steady">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
 <style>
   /* ---------- Tokens ---------- */
   :root{
@@ -1633,3 +1650,17 @@
   }
 })();
 </script>
+<script>
+  // Web-only PWA plumbing. Never runs inside the Android (Capacitor) app.
+  (function(){
+    var isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNativeApp) return;
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(function(){ /* offline still works without SW on native */ });
+    }
+    // Ask the browser not to evict health data under storage pressure.
+    if (navigator.storage && navigator.storage.persist) { navigator.storage.persist(); }
+  })();
+</script>
+</body>
+</html>
