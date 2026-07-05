@@ -1,6 +1,6 @@
 # Steady — Standalone Android App: Handoff
 
-**Last updated:** 2026-07-04 (fix round 2)
+**Last updated:** 2026-07-04 (v1.2: added legal disclaimer modal)
 **Goal:** Turn the Steady health app into a real installed Android app that lives entirely on Sara's phone — works offline, no link, not connected to anything external. Plus a **"Find my download"** button that auto-imports the newest `takeout-*.zip` from the phone's Downloads.
 
 ---
