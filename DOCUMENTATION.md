@@ -36,8 +36,8 @@ See the [Full Legal Disclaimer](#full-legal-disclaimer) section below for comple
 **Steady** is a mobile health tracking application designed for people with Ehlers-Danlos Syndrome (EDS) and dysautonomia, particularly Postural Orthostatic Tachycardia Syndrome (POTS). It runs entirely offline on your Android phone, never sends data anywhere, and lets you track what matters: heart rate changes when standing, symptom patterns, triggers, and how you feel day-to-day.
 
 **Platform:** Android 10+  
-**License:** [Choose: MIT, Apache 2.0, GPL, etc.]  
-**Current Version:** 1.1  
+**License:** MIT  
+**Current Version:** 2.1  
 **Built With:** Capacitor 6, Vanilla JavaScript, Android Studio/Gradle
 
 ---
@@ -104,13 +104,12 @@ Tap **"Trends"** to see:
 - **Insight cards** ("Your resting HR ran 8 bpm higher on rough days")
 
 #### Import Fitbit / Google Health Data
-1. Go to **Backup** (top-right menu) → **"Import Fitbit data"**
-2. Either:
-   - Tap **"Find my download for me"** (scans your Downloads folder)
-   - Tap **"Import Fitbit data"** (pick the file yourself)
-3. Choose your `takeout-*.zip` from a Google Takeout export
-4. The app pulls in: resting HR, sleep, step count, HRV (if available)
-5. **Your data stays on your phone** — nothing is uploaded
+1. Go to **Backup** (top-right menu)
+2. On the Android app, tap **"Sync from Health Connect"** for automatic import — or use
+   **"Import Fitbit data"** to pick a `takeout-*.zip` from a Google Takeout export
+   (tap **"How to get my Fitbit data"** in the same menu for a step-by-step guide)
+3. The app pulls in: resting HR, nighttime HR, sleep, step count, HRV (if available)
+4. **Your data stays on your phone** — nothing is uploaded
 
 #### Back Up Your Data
 1. Go to **Backup** → **"Back up (download a file)"**
@@ -119,8 +118,9 @@ Tap **"Trends"** to see:
 4. To restore: **Backup** → **"Restore from a backup"** and pick the file
 
 #### Settings
-Tap **Backup** and scroll to toggle:
-- **"I'm under 19"** — changes stand-test threshold to +40 bpm (pediatric POTS diagnostic threshold)
+Tap **Backup** to find:
+- **Your name** — personalizes the greeting on the Today screen
+- **Edit reminders** (on the Today screen's Reminders card) — add or remove your own timed check-ins
 
 ---
 
@@ -128,7 +128,7 @@ Tap **Backup** and scroll to toggle:
 
 ### From Pre-Built APK (Easiest)
 
-1. **Download** the latest `Steady-vX.X.apk` from [GitHub Releases](https://github.com/your-org/steady/releases)
+1. **Download** the latest APK from [GitHub Releases](https://github.com/GraySKL/Steady/releases)
 2. **Transfer to your phone** (email, Google Drive, USB cable)
 3. **Open the file** → **Install** → tap "Install unknown apps" if prompted
 4. **Done** — the app is now on your phone
@@ -358,8 +358,10 @@ $sdk="C:\android-sdk"
 ### Step 2: Clone & Prepare the Project
 
 ```bash
-git clone https://github.com/your-org/steady.git
-cd steady/steady-android
+git clone https://github.com/GraySKL/Steady.git
+cd Steady
+# Note: the Capacitor Android project (steady-android/) is not yet committed to
+# this repo — see BUILDING.md for how to recreate it from steady.html
 
 # Install Node dependencies
 npm install
@@ -727,10 +729,10 @@ Built with care for people managing chronic illness. Steady is a personal projec
 
 ---
 
-**Last updated:** 2026-07-04  
-**Version:** 1.1  
-**Maintained by:** [Your Name / Organization]  
-**GitHub:** https://github.com/your-org/steady  
+**Last updated:** 2026-07-05  
+**Version:** 2.1  
+**Maintained by:** GraySKL  
+**GitHub:** https://github.com/GraySKL/Steady  
 **License:** MIT (see [LICENSE](LICENSE) file)
 
 

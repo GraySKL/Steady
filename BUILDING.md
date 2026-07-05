@@ -2,6 +2,12 @@
 
 This guide covers building Steady from source for Android development and contribution.
 
+> **Note:** The Capacitor Android project (`android-build/` / `steady-android/`) is **not
+> yet committed to this repository** — the repo currently contains the web app
+> (`steady.html`) plus docs. To build the APK yourself, recreate the wrapper project
+> with the steps in [HANDOFF.md](HANDOFF.md#appendix-rebuilding-the-toolchain-from-scratch-disaster-recovery),
+> or open an issue if you'd like the project committed.
+
 ## Quick Start (10 minutes)
 
 ```bash

@@ -34,8 +34,8 @@ Examples of out-of-scope:
 ### 1. Fork & Clone
 
 ```bash
-git clone https://github.com/your-fork/steady.git
-cd steady
+git clone https://github.com/<your-username>/Steady.git
+cd Steady
 git checkout -b feature/your-feature
 ```
 
@@ -202,7 +202,8 @@ Added a switch in the Trends header; clicking it re-renders charts with HRV
 
 ### Reporting Security Issues
 
-**Do not** post security vulnerabilities in public issues. Email the maintainer privately with:
+**Do not** post security vulnerabilities in public issues. Report privately via
+[GitHub's private vulnerability reporting](https://github.com/GraySKL/Steady/security/advisories/new), including:
 - What the vulnerability is
 - How to reproduce it
 - Suggested fix (optional)
