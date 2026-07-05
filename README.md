@@ -47,17 +47,26 @@ See [**How to Use Steady**](DOCUMENTATION.md#how-to-use-steady) for detailed ins
 
 1. **Clone this repo**
    ```bash
-   git clone https://github.com/your-org/steady.git
-   cd steady
+   git clone https://github.com/GraySKL/Steady.git
+   cd Steady
    ```
 
-2. **Read the setup guide**
+2. **Choose your path:**
+
+   **🔧 Build for Android** (want to contribute to the native app?)
    ```bash
-   cat HANDOFF.md  # Build setup & troubleshooting
+   cd android-build
+   ./test-build.ps1          # Windows
+   # or: npx cap sync android && cd android && ./gradlew assembleDebug
    ```
+   See [**BUILDING.md**](BUILDING.md) for detailed setup, troubleshooting, and development workflow.
 
-3. **Follow the build instructions**  
-   See [Building from Source](DOCUMENTATION.md#building-from-source) for step-by-step setup.
+   **💻 Edit the web app** (want to add features?)
+   ```bash
+   # Edit steady.html (the entire app is one file)
+   # Then rebuild (see above) or test in a web browser
+   ```
+   See [**DOCUMENTATION.md**](DOCUMENTATION.md#developers-guide) for architecture details.
 
 ---
 
