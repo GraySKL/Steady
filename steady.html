@@ -317,7 +317,7 @@
     <section class="screen active" id="today" aria-label="Today">
       <div>
         <p class="eyebrow" id="todayDate">Today</p>
-        <h2 class="greeting" id="hello">Hi Sara</h2>
+        <h2 class="greeting" id="hello">Hi there</h2>
         <p class="sub">How's your body feeling right now?</p>
       </div>
 
@@ -330,6 +330,11 @@
           <button data-feel="5" aria-pressed="false"><span class="face">☀️</span><span class="cap">Great</span></button>
         </div>
         <p class="hint" id="feelSaved" hidden>Saved — thank you for checking in.</p>
+      </div>
+
+      <div class="card" id="medsCard">
+        <div class="row"><span style="font-weight:600">Medications &amp; Check-ins</span><span class="hint" id="nextReminder" style="font-size:13px"></span></div>
+        <div id="medsBody" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
 
       <div class="actions">
@@ -538,12 +543,12 @@
 
   const state = load();
 
-  function emptyHealth(){ return {restingHR:{}, sleepMin:{}, hrv:{}, steps:{}, lastImport:null}; }
-  function defaultState(){ return {version:1, settings:{ageGroup:"adult"}, standTests:[], logs:[], feelings:[], health:emptyHealth()}; }
+  function emptyHealth(){ return {restingHR:{}, sleepMin:{}, sleepHR:{}, hrv:{}, steps:{}, lastImport:null}; }
+  function defaultState(){ return {version:1, settings:{ageGroup:"adult"}, standTests:[], logs:[], feelings:[], health:emptyHealth(), medications:{}}; }
   function load(){
     try{ const s = JSON.parse(localStorage.getItem(KEY)); if(!s||typeof s!=="object") return defaultState();
       s.standTests=s.standTests||[]; s.logs=s.logs||[]; s.feelings=s.feelings||[]; s.settings=s.settings||{ageGroup:"adult"};
-      s.health = Object.assign(emptyHealth(), s.health||{});
+      s.health = Object.assign(emptyHealth(), s.health||{}); s.medications=s.medications||{};
       return s;
     }catch(e){ return defaultState(); }
   }
@@ -638,9 +643,80 @@
     wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
   }
 
+  /* ============ MEDICATIONS & REMINDERS ============ */
+  const REMINDERS = [
+    {time:"09:00", label:"Morning medication", emoji:"🌅", check:"morningMeds"},
+    {time:"13:00", label:"Have you eaten? 🍽️", emoji:"🍽️", check:"eaten"},
+    {time:"21:00", label:"Evening medication", emoji:"🌙", check:"eveningMeds"}
+  ];
+  function logMedication(type, timestamp=Date.now()){
+    const today=isoDay(timestamp);
+    if(!state.medications[today]) state.medications[today]={};
+    const nowChecked=!state.medications[today][type]; // toggle — a second tap unchecks a mistake
+    state.medications[today][type]=nowChecked;
+    save();
+    if(nowChecked) medCheckResponse();
+  }
+  function todayFeeling(){ const f=[...state.feelings].reverse().find(x=> isToday(x.ts)); return f? f.value : null; }
+  // pick a message that matches how she said she's feeling today
+  function moodMessage(sets){
+    const v=todayFeeling();
+    const arr = v>=4 ? sets.great : (v!=null && v<=2 ? sets.rough : sets.okay);
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+  function medCheckResponse(){
+    toast(moodMessage({
+      great:["Yes! Riding the good day — keep it going 🎉","Look at you go today ✨","Done, and you're feeling great — love that 🌟","Crushing it today 💪","One more win on a good day 🌟"],
+      okay:["Nice — that's checked off ✓","Done. One less thing to hold 💚","Got it, taken care of ✓","That's handled 👍","Checked off — steady as you go 💚"],
+      rough:["That's one thing done — be gentle with yourself today 💙","Checked off. Tomorrow might feel better 🌤️","Done, even on a hard day — that really counts 💙","One step at a time. You did this one 🌱","Small thing, big deal on a rough day 💙"]
+    }));
+  }
+  function getMedsForToday(){
+    const today=isoDay(Date.now());
+    return state.medications[today]||{};
+  }
+  function getNextReminder(){
+    const now=new Date(); const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
+    const current=h+":"+m;
+    for(const r of REMINDERS){ if(r.time>current) return r; }
+    return REMINDERS[0];
+  }
+  function showReminder(reminder){
+    if(!document.hidden){ // only if app is visible
+      const msg=reminder.check?`${reminder.label} — tap to confirm`:`Time for ${reminder.label}`;
+      toast(msg);
+      try{
+        if(navigator.vibrate) navigator.vibrate([200,100,200]); // gentle vibration
+      }catch(e){}
+    }
+  }
+  function renderMedsCard(){
+    const meds=getMedsForToday(); const next=getNextReminder();
+    const medsBody=$("#medsBody");
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Next: <strong>${next.label}</strong> at ${next.time}</div>`;
+    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
+    REMINDERS.forEach(r=>{
+      const done=meds[r.check]||false;
+      const bg=done?'var(--good-soft)':'transparent';
+      const bd=done?'var(--good)':'var(--line)';
+      const ink=done?'var(--good)':'var(--ink)';
+      const box=done
+        ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--good);color:#fff;font-size:14px;flex:0 0 auto">✓</span>'
+        : '<span style="display:inline-flex;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto"></span>';
+      html+=`<button class="block" style="display:flex;align-items:center;gap:11px;text-align:left;padding:12px 14px;font-size:15px;border-radius:12px;background:${bg};border:1.5px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer" onclick="logMedication('${r.check}');renderToday();return false;">
+        ${box}
+        <span>${r.emoji} ${r.label}${done?' &middot; done':''}</span>
+      </button>`;
+    });
+    html+=`</div>`;
+    medsBody.innerHTML=html;
+    $("#nextReminder").textContent=`Next: ${next.time}`;
+  }
+
   /* ============ TODAY ============ */
   function renderToday(){
     $("#todayDate").textContent = fmtDate(new Date());
+    renderMedsCard();
     // reflect today's feeling
     const todayFeel = [...state.feelings].reverse().find(f=> isToday(f.ts));
     $$("#feelScale button").forEach(b=> b.setAttribute("aria-pressed", todayFeel && String(todayFeel.value)===b.dataset.feel ? "true":"false"));
@@ -842,7 +918,11 @@
       readings: Object.fromEntries(vals)};
     state.standTests.push(rec); save();
     stand.phase="done"; stand.result=rec; drawStand();
-    toast("Stand test saved.");
+    toast(moodMessage({
+      great:["Stand test done — nice work staying on top of it ⚡","Logged! You're really tracking well today 🌟","Done and dusted — great habit 💪"],
+      okay:["Stand test saved ✓ Good on you for checking.","Logged — useful data for you and your doctor.","Saved. One more point in your picture 📈"],
+      rough:["Stand test saved — thank you for doing that on a hard day 💙","Logged. Resting now is more than okay 🌱","Done. Be kind to yourself the rest of today 💙"]
+    }));
   }
   function cancelStand(){ clearStandTimer(); stand=null; renderStand(); }
   function mmss(s){ s=Math.max(0,Math.round(s)); const m=Math.floor(s/60); const r=s%60; return m+":"+String(r).padStart(2,"0"); }
@@ -889,7 +969,11 @@
     $$("#severitySeg button").forEach(x=> x.setAttribute("aria-pressed","false"));
     $("#logNote").value="";
     renderRecentLogs();
-    toast("Log saved. Well done for tracking.");
+    toast(moodMessage({
+      great:["Logged! Noticing patterns is powerful — nice 🌟","Saved. You're really tuned in today ✨","Got it noted — great tracking 💪"],
+      okay:["Log saved — well done for tracking ✓","Noted. Every entry helps you see the picture 📋","Saved. That's a helpful thing to have 💚"],
+      rough:["Logged — I've got it noted. Rest up 💙","Saved. Naming the hard stuff takes strength 🌱","Got it down for you. Be gentle now 💙"]
+    }));
   });
   function renderRecentLogs(){
     const box = $("#recentLogs");
@@ -1093,8 +1177,40 @@
     const grid=[0,4,8].map(g=>`<line x1="${pad.l}" y1="${y(g).toFixed(1)}" x2="${W-pad.r}" y2="${y(g).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l-5}" y="${(y(g)+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--muted)">${g}</text>`).join("");
     return `<div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Hours of sleep per night">${grid}${bars}${labels}</svg></div><div class="legend"><span><i style="background:var(--accent)"></i>6h or more</span><span><i style="background:var(--watch)"></i>under 6h</span></div>`;
   }
+  function analyzeSleepHRPatterns(){
+    const h=state.health; const out=[];
+    const shr=h.sleepHR; const dates=Object.keys(shr).sort().reverse().slice(0,30);
+    if(dates.length<3) return out;
+    const vals=dates.map(d=>shr[d]).filter(x=>x!=null);
+    if(vals.length<3) return out;
+    const baseline=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    const sd=Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-baseline,2),0)/vals.length);
+    let consecHigh=0, maxConsec=0;
+    for(let i=0;i<dates.length;i++){ const v=shr[dates[i]]; if(v>baseline+8) { consecHigh++; maxConsec=Math.max(maxConsec,consecHigh); } else { consecHigh=0; } }
+    if(maxConsec>=2) out.push({t:"Elevated sleep HR", m:`You had <strong>${maxConsec} nights in a row</strong> with sleep heart rate above your average (${baseline} bpm). Could indicate restlessness or stress during sleep — worth discussing with your provider.`});
+    for(let i=0;i<dates.length-1;i++){ const v1=shr[dates[i]], v2=shr[dates[i+1]]; if(v1!=null && v2!=null && Math.abs(v1-v2)>=12) { out.push({t:"Sleep HR spike", m:`Your heart rate during sleep spiked <strong>${Math.abs(v1-v2)} bpm</strong> on <strong>${relDay(dates[i])}</strong> — could be from restlessness, dreams, or sleep disruption.`}); break; } }
+    if(sd>=10) out.push({t:"Restless sleep pattern", m:`Your sleep heart rate has been quite variable lately (ranging ${Math.round(Math.min(...vals))}-${Math.round(Math.max(...vals))} bpm). High variability during sleep can signal restlessness — something to mention to your provider.`});
+    return out;
+  }
+  function analyzeRestingHRPatterns(){
+    const h=state.health; const out=[];
+    const rhr=h.restingHR; const dates=Object.keys(rhr).sort().reverse().slice(0,30);
+    if(dates.length<3) return out;
+    const vals=dates.map(d=>rhr[d]).filter(x=>x!=null);
+    if(vals.length<3) return out;
+    const baseline=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    const sd=Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-baseline,2),0)/vals.length);
+    let consecHigh=0, maxConsec=0;
+    for(let i=0;i<dates.length;i++){ const v=rhr[dates[i]]; if(v>baseline+5) { consecHigh++; maxConsec=Math.max(maxConsec,consecHigh); } else { consecHigh=0; } }
+    if(maxConsec>=2) out.push({t:"Consecutive elevated nights", m:`You had <strong>${maxConsec} nights in a row</strong> with resting HR above your average (${baseline} bpm). Worth discussing with your provider if this persists.`});
+    for(let i=0;i<dates.length-1;i++){ const v1=rhr[dates[i]], v2=rhr[dates[i+1]]; if(v1!=null && v2!=null && Math.abs(v1-v2)>=10) { out.push({t:"Resting HR spike", m:`Your resting heart rate jumped <strong>about ${Math.abs(v1-v2)} bpm</strong> on <strong>${relDay(dates[i])}</strong>. That's unusual for you — might be worth noting for your provider.`}); break; } }
+    if(sd>=8) out.push({t:"Heart rate variability", m:`Your resting heart rate has been quite variable lately (ranging ${Math.round(Math.min(...vals))}-${Math.round(Math.max(...vals))} bpm). This pattern might be worth mentioning to your provider.`});
+    return out;
+  }
   function healthInsights(){
     const h=state.health; const out=[];
+    out.push(...analyzeSleepHRPatterns());
+    out.push(...analyzeRestingHRPatterns());
     const feelByDay={}; state.feelings.forEach(f=> feelByDay[isoDay(f.ts)] = f.value);
     const rough=[], good=[];
     Object.keys(feelByDay).forEach(d=>{ if(feelByDay[d]<=2) rough.push(d); else if(feelByDay[d]>=4) good.push(d); });
@@ -1156,8 +1272,20 @@
   function pSleep(data,h,c){ const arr=Array.isArray(data)?data:(data&&data.sleep?data.sleep:null); if(!arr) return; arr.forEach(it=>{ const d=normDate(it.dateOfSleep||it.dateTime||it.startTime); let m=Number(it.minutesAsleep); if(!m&&it.duration) m=Math.round(it.duration/60000); if(d&&m>0&&m<1440){ if(m>(h.sleepMin[d]||0)) h.sleepMin[d]=m; c.sleepMin++; } }); }
   function pHRV(data,h,c){ if(!Array.isArray(data)) return; data.forEach(it=>{ const d=normDate(it.dateTime||(it.value&&it.value.date)); const val=it.value&&(it.value.dailyRmssd!=null?it.value.dailyRmssd:it.value.rmssd); const n=Number(val); if(d&&n>0&&n<400){ h.hrv[d]=Math.round(n*10)/10; c.hrv++; } }); }
   function pSteps(data,h,c){ if(!Array.isArray(data)) return; data.forEach(it=>{ const d=normDate(it.dateTime); const v=Number(it.value); if(d&&v>=0&&v<200000){ if(/\d{1,2}:\d{2}/.test(String(it.dateTime))) h.steps[d]=(h.steps[d]||0)+v; else h.steps[d]=v; c.steps++; } }); }
+  function pSleepHR(data,h,c){ if(!Array.isArray(data?.value)) return;
+    const nightReadings=[]; let dateStr=null;
+    data.value.forEach(it=>{ const time=it.dateTime; if(!time) return;
+      const m=time.match(/(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{2})/);
+      if(!m) return; const [,mo,da,yr,hr,mi]=m; const h_num=parseInt(hr);
+      if(h_num>=22 || h_num<7){ const bpm=it.value?.bpm; if(bpm&&bpm>25&&bpm<220) nightReadings.push(bpm); }
+      if(!dateStr) dateStr=`20${yr}-${String(mo).padStart(2,"0")}-${String(da).padStart(2,"0")}`;
+    });
+    if(nightReadings.length>20 && dateStr){ const avg=Math.round(nightReadings.reduce((a,b)=>a+b)/nightReadings.length);
+      h.sleepHR[dateStr]=avg; c.sleepHR++; }
+  }
   function classifyApply(name,data,h,c){ const ln=(name||"").toLowerCase();
-    if(ln.includes("resting")) pRestingHR(data,h,c);
+    if(ln.includes("heart_rate")) pSleepHR(data,h,c);
+    else if(ln.includes("resting")) pRestingHR(data,h,c);
     else if(ln.includes("hrv")||ln.includes("variability")) pHRV(data,h,c);
     else if(ln.includes("sleep")) pSleep(data,h,c);
     else if(ln.includes("step")) pSteps(data,h,c);
@@ -1168,7 +1296,7 @@
     }
   }
   async function importFitbit(file){
-    const h=emptyHealth(); const c={restingHR:0,sleepMin:0,hrv:0,steps:0,files:0,skipped:0};
+    const h=emptyHealth(); const c={restingHR:0,sleepMin:0,sleepHR:0,hrv:0,steps:0,files:0,skipped:0};
     if(file.name.toLowerCase().endsWith(".json")){
       let data; try{ data=JSON.parse(await file.text()); }catch(e){ throw new Error("not-json"); }
       classifyApply(file.name,data,h,c); c.files++; return {health:h,counts:c};
@@ -1179,35 +1307,37 @@
       const ln=e.name.toLowerCase();
       if(!ln.endsWith(".json")) continue;
       const isResting=ln.includes("resting_heart_rate")||ln.includes("resting heart rate");
-      if(ln.includes("heart_rate")&&!isResting&&!ln.includes("variability")){ c.skipped++; continue; } // skip huge intraday HR
+      const isSleepHR=ln.includes("heart_rate")&&!isResting&&!ln.includes("variability");
       const isSleep=ln.includes("sleep")&&!ln.includes("score")&&!ln.includes("profile");
       const isHRV=ln.includes("heart_rate_variability")||ln.includes("hrv");
       const isSteps=ln.includes("steps");
-      if(!(isResting||isSleep||isHRV||isSteps)) continue;
-      if(e.uncompSize>8*1024*1024){ c.skipped++; continue; }
+      if(!(isResting||isSleepHR||isSleep||isHRV||isSteps)) continue;
+      if(e.uncompSize>8*1024*1024 && !isSleepHR){ c.skipped++; continue; }
       let text; try{ text=await readEntry(zip,e); }catch(err){ c.skipped++; continue; }
       let data; try{ data=JSON.parse(text); }catch(err){ c.skipped++; continue; }
       c.files++;
       if(isResting) pRestingHR(data,h,c);
+      else if(isSleepHR) pSleepHR(data,h,c);
       else if(isHRV) pHRV(data,h,c);
       else if(isSleep) pSleep(data,h,c);
       else if(isSteps) pSteps(data,h,c);
     }
     return {health:h,counts:c};
   }
-  function mergeHealth(src){ ["restingHR","sleepMin","hrv","steps"].forEach(k=> Object.assign(state.health[k], src[k])); state.health.lastImport=Date.now(); }
+  function mergeHealth(src){ ["restingHR","sleepMin","sleepHR","hrv","steps"].forEach(k=> Object.assign(state.health[k], src[k])); state.health.lastImport=Date.now(); }
   async function doImportFitbit(file, close){
     if(!file) return;
     toast("Reading your Fitbit data…");
     try{
       const {health,counts}=await importFitbit(file);
-      if((counts.restingHR+counts.sleepMin+counts.hrv+counts.steps)===0){
+      if((counts.restingHR+counts.sleepMin+counts.sleepHR+counts.hrv+counts.steps)===0){
         toast("Couldn't find matching health data in that file."); return;
       }
       mergeHealth(health); save();
       if(close) close();
       nav("trends");
-      toast(`Imported ${countKeys(health.restingHR)} days heart rate · ${countKeys(health.sleepMin)} nights sleep.`);
+      const msg=[countKeys(health.restingHR)?"resting HR":"", countKeys(health.sleepMin)?"sleep":"", countKeys(health.sleepHR)?"nighttime HR":""].filter(x=>x).join(" · ");
+      toast(`Imported ${msg}.`);
     }catch(err){
       const map={ "zip64":"That export uses a newer zip format I can't read yet — let me know and I'll add it.",
         "not-zip":"That didn't look like a .zip file. Pick the .zip from your export.",
@@ -1237,66 +1367,6 @@
     }
     return (off===size)? out : out.subarray(0,off);
   }
-  async function findDownload(close){
-    const C=window.Capacitor, FP=getFP();
-    if(!FP){ toast("This works in the installed app only."); return; }
-    // Check if "All files access" permission is granted
-    try{
-      const perm=await FP.checkStoragePermission();
-      if(!perm.granted){
-        toast("Need 'All files access' permission to scan Downloads.");
-        showPermissionBanner(close);
-        return;
-      }
-    }catch(e){ toast("Permission check failed: "+e.message); return; }
-
-    const FS=C.Plugins&&C.Plugins.Filesystem;
-    toast("Looking in your Downloads…");
-    const dirs=["EXTERNAL_STORAGE","DOCUMENTS","EXTERNAL"];
-    let found=null, usedDir=null;
-    for(const dir of dirs){
-      try{
-        const list=await FS.readdir({path:"Download", directory:dir});
-        const files=(list.files||[]).map(f=> (typeof f==="string")?{name:f}:f);
-        const zips=files.filter(f=> /^takeout-.*\.zip$/i.test(f.name||""));
-        if(zips.length){ zips.sort((a,b)=> (Number(b.mtime)||0)-(Number(a.mtime)||0) || ((a.name<b.name)?1:-1)); found=zips[0]; usedDir=dir; break; }
-      }catch(e){ /* try next directory */ }
-    }
-    if(!found){ toast("No takeout file found in Downloads — tap 'Import Fitbit data' and pick it."); return; }
-    toast("Found "+found.name+" — importing…");
-    try{
-      const bytes = found.uri ? await readNativeFile(FP, found.uri, found.size)
-        : b64ToBytes((await FS.readFile({path:"Download/"+found.name, directory:usedDir})).data);
-      const file=new File([bytes], found.name);
-      if(close) close();
-      await doImportFitbit(file);
-    }catch(e){ toast("Found it but couldn't open it: "+e.message); }
-  }
-
-  function showPermissionBanner(close){
-    const FP=getFP();
-    const wrap=document.createElement("div");
-    wrap.style.cssText="position:fixed;inset:0;z-index:70;background:rgba(10,20,18,.6);display:flex;align-items:center;justify-content:center;padding:24px";
-    wrap.innerHTML=`
-      <div style="background:var(--surface,#1a1f1d);border-radius:16px;padding:24px;max-width:340px;width:100%;display:flex;flex-direction:column;gap:14px">
-        <h3 style="margin:0;font-size:17px">Storage permission needed</h3>
-        <p style="margin:0;color:var(--text-muted,#8a9a92);font-size:14px;line-height:1.5">
-          To scan your Downloads folder, Steady needs "All files access". Tap below to open the setting, then toggle it on.
-        </p>
-        <button class="btn primary block" id="goPermSettings" style="margin-top:4px">Open permission setting</button>
-        <button class="btn ghost block" id="dismissPerm">Not now</button>
-      </div>`;
-    document.body.appendChild(wrap);
-    const dismiss=()=> wrap.remove();
-    $("#dismissPerm").addEventListener("click", dismiss);
-    wrap.addEventListener("click", e=>{ if(e.target===wrap) dismiss(); });
-    $("#goPermSettings").addEventListener("click", async ()=>{
-      dismiss();
-      toast("Opening settings — toggle 'All files access' on.");
-      try{ await FP.openStorageSettings(); }catch(e){ toast("Could not open settings: "+e.message); }
-    });
-  }
-
   /* ---- native only: open a file picker and import the chosen file ---- */
   async function pickAndImport(close){
     const FP=getFP();
@@ -1313,6 +1383,54 @@
     }catch(e){
       toast("Error: "+(e.message||e.toString()).slice(0,120));
     }
+  }
+
+  /* ---- native only: sync recent data straight from Health Connect ---- */
+  async function syncHealthConnect(close){
+    const C=window.Capacitor, HC=C&&C.Plugins&&C.Plugins.HealthConnect;
+    if(!HC){ toast("This works in the installed app only."); return; }
+    try{
+      const avail=await HC.checkAvailability();
+      if(avail.status==="update_required"){ toast("Please update Health Connect from the Play Store, then try again."); return; }
+      if(avail.status!=="available"){ toast("Health Connect isn't set up on this phone yet."); return; }
+      let perm=await HC.checkHealthPermissions();
+      if(!perm.granted){
+        toast("Opening Health Connect permissions…");
+        perm=await HC.requestHealthPermissions();
+        if(!perm.granted){ toast("Steady needs those permissions to sync — you can allow them anytime."); return; }
+      }
+      toast("Syncing from Health Connect…");
+      const data=await HC.readHealthData({days:30});
+      const got=["restingHR","sleepMin","sleepHR","steps"].reduce((n,k)=> n+countKeys(data&&data[k]), 0);
+      if(!got){ toast("Connected, but nothing came through. Check that Fitbit is set to sync into Health Connect."); return; }
+      mergeHealth(data); save();
+      if(close) close();
+      nav("trends");
+      const bits=[countKeys(data.restingHR)?"resting HR":"", countKeys(data.sleepHR)?"nighttime HR":"", countKeys(data.sleepMin)?"sleep":""].filter(x=>x).join(" · ");
+      toast("Synced "+(bits||"data")+" from Health Connect.");
+    }catch(e){ toast("Sync problem: "+((e&&e.message)||e)); }
+  }
+
+  /* ---- native only: quiet auto-sync from Health Connect (on open / resume) ---- */
+  let _lastAutoSync=0;
+  async function autoSyncHealthConnect(force){
+    const C=window.Capacitor, HC=C&&C.Plugins&&C.Plugins.HealthConnect;
+    if(!HC) return;
+    if(!force && Date.now()-_lastAutoSync < 20*60*1000) return; // at most every 20 min
+    _lastAutoSync=Date.now();
+    try{
+      const avail=await HC.checkAvailability();
+      if(avail.status!=="available") return;
+      const perm=await HC.checkHealthPermissions();
+      if(!perm.granted) return; // never nag on auto-sync; the menu button handles granting
+      const data=await HC.readHealthData({days:30});
+      const got=["restingHR","sleepMin","sleepHR","steps"].reduce((n,k)=> n+countKeys(data&&data[k]), 0);
+      if(!got) return;
+      mergeHealth(data); save();
+      const active=document.querySelector(".screen.active");
+      if(active&&active.id==="trends") renderTrends();
+      else if(active&&active.id==="today") renderToday();
+    }catch(e){ /* stay quiet — the manual button surfaces errors */ }
   }
 
   /* ---- native only: restore a backup via the native picker ---- */
@@ -1344,15 +1462,11 @@
         <hr class="divider">
         <div class="row"><span style="font-weight:600">Fitbit data</span>
           <span class="hint">${countKeys(state.health.restingHR)} days · ${state.health.lastImport?relDay(state.health.lastImport):"not yet"}</span></div>
-        ${isNative?'<button class="btn primary block" id="pickFile">Import Fitbit data</button>':''}
-        ${isNative?'<button class="btn subtle block" id="findDownload">Find my download for me</button>':''}
+        ${isNative?'<button class="btn subtle block" id="pickFile">Import Fitbit data (older history)</button>':''}
         ${!isNative?'<button class="btn primary block" id="importFitbit">Import Fitbit data</button>':''}
         ${!isNative?'<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">':''}
         <p class="hint" style="margin:0">Brings in resting heart rate, sleep and steps from your export — it stays on this phone, nothing is uploaded. <strong>Can't find the file?</strong> In the file box, tap search and type <strong>takeout</strong>.</p>
-        <hr class="divider">
-        <div class="row"><span style="font-weight:600">I'm under 19</span>
-          <button class="btn ${teen?'primary':'subtle'}" id="ageToggle" style="min-height:44px;padding:0 18px">${teen?'Yes':'No'}</button></div>
-        <p class="hint" style="margin:0">Changes the stand-test line to +40 bpm, which is what doctors use for teens.</p>
+        ${isNative?'<hr class="divider"><div class="row"><span style="font-weight:600">Auto-sync</span><span class="hint">Health Connect</span></div><button class="btn primary block" id="hcSync">Sync from Health Connect</button><p class="hint" style="margin:0">Pulls your recent resting HR, sleep, steps &amp; nighttime HR straight from your phone — no export needed. Your longer history still comes from the Fitbit import above.</p>':''}
         <hr class="divider">
         <div class="row"><span style="font-weight:600">Totals</span>
           <span class="hint">${state.standTests.length} tests · ${state.logs.length} logs · ${state.feelings.length} check-ins</span></div>
@@ -1369,11 +1483,8 @@
       $("#fitbitFile").addEventListener("change", e=> doImportFitbit(e.target.files[0], close));
     }else{
       $("#pickFile").addEventListener("click", ()=> pickAndImport(close));
-      $("#findDownload").addEventListener("click", ()=> findDownload(close));
+      const hc=$("#hcSync"); if(hc) hc.addEventListener("click", ()=> syncHealthConnect(close));
     }
-    $("#ageToggle").addEventListener("click", ()=>{
-      state.settings.ageGroup = teen?"adult":"teen"; save(); close(); toast("Saved.");
-    });
   }
   async function backup(){
     const data = JSON.stringify(state,null,2);
@@ -1415,8 +1526,28 @@
   // (viewer toggle sets data-theme; nothing to do here)
 
   /* ---------- init ---------- */
+  // Check for medication reminders every minute
+  setInterval(()=>{
+    const now=new Date(); const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
+    const current=h+":"+m;
+    for(const r of REMINDERS){
+      if(r.time===current && !sessionStorage.getItem("reminded-"+r.time)){
+        sessionStorage.setItem("reminded-"+r.time, "1");
+        showReminder(r);
+      }
+    }
+    if(current==="00:00") REMINDERS.forEach(r=> sessionStorage.removeItem("reminded-"+r.time));
+  }, 60000);
+
   if(checkDisclaimer()){
     renderToday();
+    if(isNative){
+      autoSyncHealthConnect(true); // sync once on open
+      // and again each time the app comes back to the foreground
+      document.addEventListener("visibilitychange", ()=>{
+        if(!document.hidden && state.settings.disclaimerAgreed) autoSyncHealthConnect();
+      });
+    }
   }
 })();
 </script>
