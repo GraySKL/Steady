@@ -333,7 +333,7 @@
       </div>
 
       <div class="card" id="medsCard">
-        <div class="row"><span style="font-weight:600">Meds &amp; Check-ins</span></div>
+        <div class="row"><span style="font-weight:600">Reminders &amp; Check-ins</span></div>
         <div id="medsBody" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
 
@@ -520,7 +520,7 @@
 <script>
 (function(){
   "use strict";
-  const APP_VERSION = "2.0"; // shown in the menu so you can confirm which build is installed
+  const APP_VERSION = "2.1"; // shown in the menu so you can confirm which build is installed
   const _rawBuild = "__BUILD_ID__"; // test-build.ps1 swaps this for the short git hash at build time
   const BUILD_ID = _rawBuild.indexOf("__BUILD") === 0 ? "" : _rawBuild; // blank in the un-stamped web version
   const KEY = "steady_v1";
@@ -538,15 +538,24 @@
 
   const state = load();
 
+  function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=> ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
   function emptyHealth(){ return {restingHR:{}, sleepMin:{}, sleepHR:{}, hrv:{}, steps:{}, lastImport:null}; }
-  function defaultState(){ return {version:1, settings:{ageGroup:"adult"}, standTests:[], logs:[], feelings:[], health:emptyHealth(), medications:{}}; }
+  function defaultReminders(){ return [
+    {id:"r1", time:"09:00", label:"Morning medication"},
+    {id:"r2", time:"13:00", label:"Have you eaten? 🍽️"},
+    {id:"r3", time:"21:00", label:"Evening medication"}
+  ]; }
+  function defaultState(){ return {version:1, settings:{ageGroup:"adult", userName:"", reminders:defaultReminders()}, standTests:[], logs:[], feelings:[], health:emptyHealth(), medications:{}}; }
   function load(){
     try{ const s = JSON.parse(localStorage.getItem(KEY)); if(!s||typeof s!=="object") return defaultState();
       s.standTests=s.standTests||[]; s.logs=s.logs||[]; s.feelings=s.feelings||[]; s.settings=s.settings||{ageGroup:"adult"};
       s.health = Object.assign(emptyHealth(), s.health||{}); s.medications=s.medications||{};
+      if(s.settings.userName==null) s.settings.userName="";
+      if(!Array.isArray(s.settings.reminders)) s.settings.reminders=defaultReminders();
       return s;
     }catch(e){ return defaultState(); }
   }
+  function getReminders(){ return (state.settings.reminders||[]).slice().sort((a,b)=> a.time<b.time?-1:(a.time>b.time?1:0)); }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast("Couldn't save — try Backup to keep your data safe."); } }
 
   /* ---------- Disclaimer modal ---------- */
@@ -656,12 +665,7 @@
     $("#closeGuide").addEventListener("click", close);
   }
 
-  /* ============ MEDICATIONS & REMINDERS ============ */
-  const REMINDERS = [
-    {time:"09:00", label:"Morning medication", emoji:"🌅", check:"morningMeds"},
-    {time:"13:00", label:"Have you eaten? 🍽️", emoji:"🍽️", check:"eaten"},
-    {time:"21:00", label:"Evening medication", emoji:"🌙", check:"eveningMeds"}
-  ];
+  /* ============ REMINDERS & CHECK-INS ============ */
   function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(40); }catch(e){} }
   function logMedication(type, timestamp=Date.now()){
     const today=isoDay(timestamp);
@@ -691,28 +695,29 @@
     return state.medications[today]||{};
   }
   function getNextReminder(){
-    const now=new Date(); const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
-    const current=h+":"+m;
-    for(const r of REMINDERS){ if(r.time>current) return r; }
-    return REMINDERS[0];
+    const rs=getReminders(); if(!rs.length) return null;
+    const now=new Date(); const current=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+    for(const r of rs){ if(r.time>current) return r; }
+    return rs[0];
   }
   function showReminder(reminder){
     if(!document.hidden){ // only if app is visible
-      const msg=reminder.check?`${reminder.label} — tap to confirm`:`Time for ${reminder.label}`;
-      toast(msg);
-      try{
-        if(navigator.vibrate) navigator.vibrate([200,100,200]); // gentle vibration
-      }catch(e){}
+      toast(reminder.label);
+      try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
     }
   }
   function fmtClock(hhmm){ const [h,m]=hhmm.split(":").map(Number); const ap=h<12?"AM":"PM"; const h12=((h+11)%12)+1; return h12+":"+String(m).padStart(2,"0")+" "+ap; }
   function renderMedsCard(){
-    const meds=getMedsForToday(); const next=getNextReminder();
+    const meds=getMedsForToday(); const rs=getReminders(); const next=getNextReminder();
     const medsBody=$("#medsBody");
-    let html=`<div style="display:inline-flex;align-items:center;gap:7px;align-self:flex-start;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:14px;padding:8px 14px;border-radius:999px;margin-bottom:12px">⏰ Next: ${next.label} · ${fmtClock(next.time)}</div>`;
+    let html="";
+    if(next) html+=`<div style="display:inline-flex;align-items:center;gap:7px;align-self:flex-start;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:14px;padding:8px 14px;border-radius:999px;margin-bottom:12px">⏰ Next: ${escapeHtml(next.label)} · ${fmtClock(next.time)}</div>`;
     html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
-    REMINDERS.forEach(r=>{
-      const val=meds[r.check];
+    if(!rs.length){
+      html+=`<p class="hint" style="margin:2px 0">No reminders yet. Add ones that fit your day below 👇</p>`;
+    }
+    rs.forEach(r=>{
+      const val=meds[r.id];
       const done=!!val;
       const timeStr=(typeof val==="number")? fmtTime(val) : "";
       const bg=done?'var(--good-soft)':'transparent';
@@ -722,24 +727,68 @@
         ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--good);color:#fff;font-size:16px;font-weight:700;flex:0 0 auto;box-shadow:0 1px 4px rgba(47,133,90,.4)">✓</span>'
         : '<span style="display:inline-flex;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto"></span>';
       const label=done
-        ? `<span style="display:flex;flex-direction:column;line-height:1.3"><span>${r.emoji} ${r.label}</span><span style="font-size:12.5px;font-weight:700;color:var(--good)">✓ Done${timeStr?` &middot; ${timeStr}`:''}</span></span>`
-        : `<span>${r.emoji} ${r.label}</span>`;
-      html+=`<button type="button" class="block med-btn" data-check="${r.check}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:13px 14px;font-size:15px;border-radius:12px;background:${bg};border:2px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer">
+        ? `<span style="display:flex;flex-direction:column;line-height:1.3"><span>${escapeHtml(r.label)}</span><span style="font-size:12.5px;font-weight:700;color:var(--good)">✓ Done${timeStr?` &middot; ${timeStr}`:''}</span></span>`
+        : `<span>${escapeHtml(r.label)}</span>`;
+      html+=`<button type="button" class="block med-btn" data-check="${r.id}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:13px 14px;font-size:15px;border-radius:12px;background:${bg};border:2px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer">
         ${box}
         ${label}
       </button>`;
     });
     html+=`</div>`;
+    html+=`<button type="button" class="btn ghost block" id="editReminders" style="font-size:14px;margin-top:2px">✎ Edit reminders</button>`;
     medsBody.innerHTML=html;
     // wire taps here (inline onclick can't see these functions — they live inside the app's closure)
     medsBody.querySelectorAll(".med-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{ logMedication(btn.dataset.check); renderMedsCard(); });
     });
+    const er=$("#editReminders"); if(er) er.addEventListener("click", openRemindersEditor);
+  }
+  /* ---- user-editable reminders ---- */
+  function openRemindersEditor(){
+    const wrap=document.createElement("div");
+    wrap.style.cssText="position:fixed;inset:0;z-index:65;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center";
+    wrap.innerHTML=`<div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:12px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto"></div>`;
+    const sheet=wrap.firstElementChild;
+    const close=openSheet(wrap, sheet, ()=> wrap.remove());
+    const inputStyle="width:100%;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);font-size:16px";
+    function draw(){
+      const rs=getReminders();
+      const rows = rs.length ? rs.map(r=>`
+        <div class="row" style="gap:10px">
+          <div><div style="font-weight:600">${escapeHtml(r.label)}</div><div class="hint">${fmtClock(r.time)}</div></div>
+          <button type="button" class="btn subtle rem-del" data-id="${r.id}" style="min-height:40px;padding:0 14px">Remove</button>
+        </div>`).join("") : `<p class="hint" style="margin:0">No reminders yet — add your first one below.</p>`;
+      sheet.innerHTML=`
+        ${sheetHandle()}
+        <div class="row"><button class="iconbtn" id="closeRem" aria-label="Back">← Back</button><h2 style="margin:0;font-size:19px">Your reminders</h2></div>
+        <p class="hint" style="margin:0">Add reminders that fit your day — meds, meals, water, movement, anything. Tap one on the Today screen to check it off.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">${rows}</div>
+        <hr class="divider">
+        <div style="font-weight:600">Add a reminder</div>
+        <input type="time" id="remTime" value="09:00" style="${inputStyle}">
+        <input type="text" id="remLabel" maxlength="60" placeholder="What to remember (e.g. Take meds)" style="${inputStyle}">
+        <button type="button" class="btn primary block" id="remAdd">Add reminder</button>`;
+      $("#closeRem").addEventListener("click", close);
+      $("#remAdd").addEventListener("click", ()=>{
+        let time=$("#remTime").value; const label=$("#remLabel").value.trim();
+        if(!label){ toast("Give your reminder a name first."); return; }
+        if(!/^\d{1,2}:\d{2}$/.test(time||"")){ toast("Pick a time first."); return; }
+        if(time.length===4) time="0"+time;
+        state.settings.reminders=getReminders().concat([{id:"r"+Date.now(), time, label}]);
+        save(); toast("Reminder added ✓"); draw(); renderMedsCard();
+      });
+      sheet.querySelectorAll(".rem-del").forEach(b=> b.addEventListener("click", ()=>{
+        state.settings.reminders=getReminders().filter(r=> r.id!==b.dataset.id);
+        save(); draw(); renderMedsCard();
+      }));
+    }
+    draw();
   }
 
   /* ============ TODAY ============ */
   function renderToday(){
     $("#todayDate").textContent = fmtDate(new Date());
+    $("#hello").textContent = "Hi " + ((state.settings.userName||"").trim() || "there");
     renderMedsCard();
     // reflect today's feeling
     const todayFeel = [...state.feelings].reverse().find(f=> isToday(f.ts));
@@ -1480,6 +1529,9 @@
       <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:12px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto">
         ${sheetHandle()}
         <div class="row"><button class="iconbtn" id="closeSheet" aria-label="Back">← Back</button><h2 style="margin:0;font-size:19px">Your data</h2></div>
+        <label style="display:block"><span style="font-weight:600">Your name</span>
+          <input type="text" id="nameInput" maxlength="40" value="${escapeHtml(state.settings.userName||'')}" placeholder="What should we call you?" style="display:block;width:100%;margin-top:6px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);font-size:16px"></label>
+        <hr class="divider">
         <p class="hint" style="margin:0">Everything stays private on this phone. Back up now and then so it's always safe.</p>
         <button class="btn primary block" id="doBackup">Back up (download a file)</button>
         <button class="btn ghost block" id="doRestore">Restore from a backup</button>
@@ -1501,6 +1553,8 @@
     const sheet=wrap.firstElementChild;
     const close=openSheet(wrap, sheet, ()=> wrap.remove());
     $("#closeSheet").addEventListener("click", close);
+    const nameIn=$("#nameInput");
+    if(nameIn) nameIn.addEventListener("input", ()=>{ state.settings.userName=nameIn.value; save(); const h=$("#hello"); if(h) h.textContent="Hi "+((nameIn.value||"").trim()||"there"); });
     $("#doBackup").addEventListener("click", backup);
     $("#doRestore").addEventListener("click", ()=>{ if(isNative) restoreNative(close); else $("#restoreFile").click(); });
     $("#getDataGuide").addEventListener("click", ()=> openExportGuide()); // opens over the menu; Back returns here
@@ -1558,13 +1612,11 @@
   setInterval(()=>{
     const now=new Date(); const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
     const current=h+":"+m;
-    for(const r of REMINDERS){
-      if(r.time===current && !sessionStorage.getItem("reminded-"+r.time)){
-        sessionStorage.setItem("reminded-"+r.time, "1");
-        showReminder(r);
-      }
-    }
-    if(current==="00:00") REMINDERS.forEach(r=> sessionStorage.removeItem("reminded-"+r.time));
+    getReminders().forEach(r=>{
+      const k="reminded-"+r.id+"-"+r.time;
+      if(r.time===current && !sessionStorage.getItem(k)){ sessionStorage.setItem(k, "1"); showReminder(r); }
+    });
+    if(current==="00:00"){ for(let i=sessionStorage.length-1;i>=0;i--){ const k=sessionStorage.key(i); if(k&&k.indexOf("reminded-")===0) sessionStorage.removeItem(k); } }
   }, 60000);
 
   if(checkDisclaimer()){
