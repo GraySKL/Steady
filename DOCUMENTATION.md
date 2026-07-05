@@ -732,3 +732,95 @@ Built with care for people managing chronic illness. Steady is a personal projec
 **Maintained by:** [Your Name / Organization]  
 **GitHub:** https://github.com/your-org/steady  
 **License:** MIT (see [LICENSE](LICENSE) file)
+
+
+---
+
+# Appendix: Developer sections relocated from the README
+
+*(Moved here 2026-07-05 when the README was rewritten for non-technical users. Text preserved as-is.)*
+
+## What's in This Repo
+
+```
+steady/
+â”œâ”€â”€ steady.html                  # The entire app (single-file vanilla JS)
+â”œâ”€â”€ DOCUMENTATION.md             # Complete user & developer guide
+â”œâ”€â”€ HANDOFF.md                   # Build setup, toolchain, troubleshooting
+â”œâ”€â”€ README.md                    # User-facing intro
+â”œâ”€â”€ LICENSE                      # MIT License
+â”œâ”€â”€ manifest.webmanifest         # PWA manifest (web install)
+â”œâ”€â”€ sw.js                        # Service worker (offline caching)
+â”œâ”€â”€ icons/                       # PWA icons
+â””â”€â”€ .github/workflows/pages.yml  # GitHub Pages deployment
+```
+
+The Capacitor Android project (`steady-android/`) is maintained separately; see [BUILDING.md](BUILDING.md) for how to recreate it.
+
+## Architecture
+
+### Single-File Web App
+
+`steady.html` is **the entire user-facing app** â€” vanilla JavaScript with:
+- No frameworks, no build step, no dependencies
+- Direct DOM manipulation (no virtual DOM)
+- SVG charts (no charting library)
+- localStorage for persistence
+- Native bridge calls to `FilePickerPlugin` for file access
+
+**Why?**
+- âœ… Easy to audit for security
+- âœ… Small APK size
+- âœ… Fast load time
+- âœ… Works offline by default
+
+### Native Plugin (FilePickerPlugin.java)
+
+Bridges the JavaScript app to Android's file system:
+- `pickFile()` â€” Opens system file chooser
+- `readFileChunk()` â€” Reads large files in 4 MB chunks (no bridge OOM)
+- `saveToDownloads()` â€” Saves backups to MediaStore.Downloads
+
+### Capacitor
+
+[Capacitor 6](https://capacitorjs.com) wraps the web app in a native Android shell:
+- Bundles the HTML/CSS/JS inside the APK
+- Provides `@capacitor/filesystem` for directory access
+- Bridges JavaScript â†” Native code
+
+## Data Model
+
+All data lives in **localStorage** (no server). Structure:
+
+```javascript
+{
+  standTests: [ /* POTS stand test results */ ],
+  logs: [ /* Symptom & trigger logs */ ],
+  feelings: [ /* Daily 1-5 mood ratings */ ],
+  medications: { /* daily check-off timestamps, keyed by date */ },
+  health: { /* Imported wearable data */
+    restingHR: { "2026-01-15": 72, ... },
+    sleepMin: { "2026-01-15": 420, ... },
+    sleepHR: { "2026-01-15": 63, ... },
+    steps: { "2026-01-15": 5432, ... }
+  },
+  settings: { ageGroup: "adult", userName: "", reminders: [ /* user-defined */ ] }
+}
+```
+
+**Privacy:** Your data never leaves your phone. **Backups** are plain-text JSON â€” treat them like sensitive medical records.
+
+## FAQ (from the original README)
+
+**Q: Why is there no cloud sync?**
+A: Your health data is sensitive. Cloud sync requires an always-on server and introduces privacy/security risks. Backup â†’ Restore works fine for moving across devices and is under *your* control.
+
+**Q: How do I delete my data?**
+A: Uninstall the app (which clears localStorage). Backups are JSON files in your Downloads â€” delete them manually.
+
+**Q: What if Fitbit changes their export format?**
+A: The ZIP parser is in `steady.html` and can be updated. Open an issue if an export stops working.
+
+**Q: Is my data safe if my phone is stolen?**
+A: Steady data is protected by Android's storage encryption, but keep your phone's PIN/biometric lock enabled. Regular backups (stored safely) are your safety net.
+

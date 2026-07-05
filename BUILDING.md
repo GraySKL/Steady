@@ -313,3 +313,42 @@ Currently, we're on GitHub Releases (free, no store approval needed).
 **Steady version:** 1.2  
 **Target Android:** API 34 (Android 14)  
 **Build tools:** Gradle, Capacitor 6, Android SDK
+
+
+---
+
+# Appendix: "Building & Testing" section relocated from the README
+
+*(Moved here 2026-07-05 when the README was rewritten for non-technical users.)*
+
+## Prerequisites
+
+- **Android SDK** (API 34+)
+- **JDK 17**
+- **Node.js** v18+
+- **Gradle** (included with the project)
+
+## Build (Quick)
+
+```bash
+cd steady-android
+./test-build.ps1          # Windows â€” JS syntax check + APK build
+# or
+npm install && npx cap sync android && cd android && ./gradlew assembleDebug
+```
+
+APK appears at: `steady-android/android/app/build/outputs/apk/debug/app-debug.apk`
+
+## Run Tests
+
+```bash
+npm test
+```
+
+Tests cover:
+- ZIP parsing (Deflate decompression)
+- Fitbit data import logic
+- POTS threshold calculations
+
+See [**Testing**](DOCUMENTATION.md#testing) for full details.
+
