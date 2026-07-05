@@ -703,13 +703,17 @@
       const box=done
         ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--good);color:#fff;font-size:14px;flex:0 0 auto">✓</span>'
         : '<span style="display:inline-flex;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto"></span>';
-      html+=`<button class="block" style="display:flex;align-items:center;gap:11px;text-align:left;padding:12px 14px;font-size:15px;border-radius:12px;background:${bg};border:1.5px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer" onclick="logMedication('${r.check}');renderToday();return false;">
+      html+=`<button type="button" class="block med-btn" data-check="${r.check}" style="display:flex;align-items:center;gap:11px;text-align:left;padding:12px 14px;font-size:15px;border-radius:12px;background:${bg};border:1.5px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer">
         ${box}
         <span>${r.emoji} ${r.label}${done?' &middot; done':''}</span>
       </button>`;
     });
     html+=`</div>`;
     medsBody.innerHTML=html;
+    // wire taps here — inline onclick can't see functions inside the app's closure
+    medsBody.querySelectorAll(".med-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ logMedication(btn.dataset.check); renderMedsCard(); });
+    });
     $("#nextReminder").textContent=`Next: ${next.time}`;
   }
 
