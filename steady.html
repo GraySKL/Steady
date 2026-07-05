@@ -333,7 +333,7 @@
       </div>
 
       <div class="card" id="medsCard">
-        <div class="row"><span style="font-weight:600">Medications &amp; Check-ins</span><span class="hint" id="nextReminder" style="font-size:13px"></span></div>
+        <div class="row"><span style="font-weight:600">Meds &amp; Check-ins</span></div>
         <div id="medsBody" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
 
@@ -352,14 +352,6 @@
             <div class="desc">Note how you feel + triggers</div>
           </div>
         </button>
-      </div>
-
-      <div class="card" id="connectCard" style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
-        <div>
-          <div style="font-weight:700;font-size:15px">Get my Fitbit data</div>
-          <p class="hint" style="margin:2px 0 0">Guided export → resting HR, sleep &amp; HRV</p>
-        </div>
-        <span class="btn subtle" style="min-height:44px;padding:0 18px;pointer-events:none">Open</span>
       </div>
 
       <div class="card" id="todaySummary">
@@ -528,6 +520,9 @@
 <script>
 (function(){
   "use strict";
+  const APP_VERSION = "2.0"; // shown in the menu so you can confirm which build is installed
+  const _rawBuild = "__BUILD_ID__"; // test-build.ps1 swaps this for the short git hash at build time
+  const BUILD_ID = _rawBuild.indexOf("__BUILD") === 0 ? "" : _rawBuild; // blank in the un-stamped web version
   const KEY = "steady_v1";
   const $ = (s,el)=> (el||document).querySelector(s);
   const $$ = (s,el)=> Array.from((el||document).querySelectorAll(s));
@@ -613,15 +608,34 @@
   $$(".tab").forEach(t=> t.addEventListener("click", ()=> nav(t.dataset.nav)));
   $("#goStand").addEventListener("click", ()=> nav("stand"));
   $("#goLog").addEventListener("click", ()=> nav("log"));
-  $("#connectCard").addEventListener("click", openExportGuide);
+
+  /* ---- bottom sheets: the Back button, a swipe-down, AND the Android back gesture all close them (and back never exits the app while a sheet is open) ---- */
+  const _sheets=[];
+  window.addEventListener("popstate", ()=>{
+    for(let i=_sheets.length-1;i>=0;i--){ if(_sheets[i].alive){ _sheets[i].alive=false; _sheets[i].remove(); return; } }
+  });
+  function openSheet(wrap, sheet, remove){
+    document.body.appendChild(wrap);
+    const o={remove, alive:true}; _sheets.push(o);
+    try{ history.pushState({sheet:1}, ""); }catch(e){}
+    const close=()=>{ if(!o.alive) return; o.alive=false; remove(); };
+    wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); }); // tap the dark area
+    let startY=null;
+    sheet.addEventListener("touchstart", e=>{ startY=(sheet.scrollTop<=0)?e.touches[0].clientY:null; }, {passive:true});
+    sheet.addEventListener("touchmove", e=>{ if(startY!=null){ const dy=e.touches[0].clientY-startY; if(dy>0) sheet.style.transform="translateY("+Math.min(dy,500)+"px)"; } }, {passive:true});
+    sheet.addEventListener("touchend", e=>{ if(startY!=null){ const dy=e.changedTouches[0].clientY-startY; sheet.style.transition="transform .18s ease"; sheet.style.transform=""; setTimeout(()=>{sheet.style.transition="";},200); if(dy>110) close(); startY=null; } });
+    return close;
+  }
+  function sheetHandle(){ return '<div style="width:40px;height:5px;border-radius:3px;background:var(--line);margin:2px auto 6px;flex:0 0 auto"></div>'; }
 
   /* ============ GET MY DATA (guided export) ============ */
   function openExportGuide(){
     const wrap = document.createElement("div");
     wrap.style.cssText="position:fixed;inset:0;z-index:60;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center";
     wrap.innerHTML = `
-      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto">
-        <div class="row"><h2 style="margin:0;font-size:19px">Get your Fitbit data</h2><button class="iconbtn" id="closeGuide" aria-label="Close">Close</button></div>
+      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:12px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto">
+        ${sheetHandle()}
+        <div class="row"><button class="iconbtn" id="closeGuide" aria-label="Back">← Back</button><h2 style="margin:0;font-size:19px">Get your Fitbit data</h2></div>
         <p class="hint" style="margin:0">A one-time-ish export. Google prepares the file and <strong>emails it to you</strong> — that can take a few minutes or a few hours.</p>
         <a class="btn primary block" href="https://takeout.google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none">Open Google Takeout ↗</a>
         <p class="hint" style="margin:0;text-align:center">or go to <strong>takeout.google.com</strong> in your browser</p>
@@ -637,10 +651,9 @@
         <hr class="divider">
         <div class="callout">Got the file? Tap <strong>Backup</strong> (top-right) → <strong>Import Fitbit data</strong>. When the file box opens, tap <strong>Search</strong> 🔍 and type <strong>takeout</strong> — it jumps straight to it (it lives in your <strong>Downloads</strong>). Pick it and you're done.</div>
       </div>`;
-    document.body.appendChild(wrap);
-    const close=()=> wrap.remove();
+    const sheet=wrap.firstElementChild;
+    const close=openSheet(wrap, sheet, ()=> wrap.remove());
     $("#closeGuide").addEventListener("click", close);
-    wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
   }
 
   /* ============ MEDICATIONS & REMINDERS ============ */
@@ -649,13 +662,15 @@
     {time:"13:00", label:"Have you eaten? 🍽️", emoji:"🍽️", check:"eaten"},
     {time:"21:00", label:"Evening medication", emoji:"🌙", check:"eveningMeds"}
   ];
+  function buzz(){ try{ if(navigator.vibrate) navigator.vibrate(40); }catch(e){} }
   function logMedication(type, timestamp=Date.now()){
     const today=isoDay(timestamp);
     if(!state.medications[today]) state.medications[today]={};
-    const nowChecked=!state.medications[today][type]; // toggle — a second tap unchecks a mistake
-    state.medications[today][type]=nowChecked;
+    const wasDone=!!state.medications[today][type];
+    if(wasDone){ delete state.medications[today][type]; }       // second tap un-checks a mistake
+    else { state.medications[today][type]=timestamp; }          // store WHEN it was done, as proof
     save();
-    if(nowChecked) medCheckResponse();
+    if(!wasDone){ buzz(); medCheckResponse(); }
   }
   function todayFeeling(){ const f=[...state.feelings].reverse().find(x=> isToday(x.ts)); return f? f.value : null; }
   // pick a message that matches how she said she's feeling today
@@ -690,31 +705,36 @@
       }catch(e){}
     }
   }
+  function fmtClock(hhmm){ const [h,m]=hhmm.split(":").map(Number); const ap=h<12?"AM":"PM"; const h12=((h+11)%12)+1; return h12+":"+String(m).padStart(2,"0")+" "+ap; }
   function renderMedsCard(){
     const meds=getMedsForToday(); const next=getNextReminder();
     const medsBody=$("#medsBody");
-    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Next: <strong>${next.label}</strong> at ${next.time}</div>`;
+    let html=`<div style="display:inline-flex;align-items:center;gap:7px;align-self:flex-start;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:14px;padding:8px 14px;border-radius:999px;margin-bottom:12px">⏰ Next: ${next.label} · ${fmtClock(next.time)}</div>`;
     html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
     REMINDERS.forEach(r=>{
-      const done=meds[r.check]||false;
+      const val=meds[r.check];
+      const done=!!val;
+      const timeStr=(typeof val==="number")? fmtTime(val) : "";
       const bg=done?'var(--good-soft)':'transparent';
       const bd=done?'var(--good)':'var(--line)';
       const ink=done?'var(--good)':'var(--ink)';
       const box=done
-        ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--good);color:#fff;font-size:14px;flex:0 0 auto">✓</span>'
-        : '<span style="display:inline-flex;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto"></span>';
-      html+=`<button type="button" class="block med-btn" data-check="${r.check}" style="display:flex;align-items:center;gap:11px;text-align:left;padding:12px 14px;font-size:15px;border-radius:12px;background:${bg};border:1.5px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer">
+        ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--good);color:#fff;font-size:16px;font-weight:700;flex:0 0 auto;box-shadow:0 1px 4px rgba(47,133,90,.4)">✓</span>'
+        : '<span style="display:inline-flex;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto"></span>';
+      const label=done
+        ? `<span style="display:flex;flex-direction:column;line-height:1.3"><span>${r.emoji} ${r.label}</span><span style="font-size:12.5px;font-weight:700;color:var(--good)">✓ Done${timeStr?` &middot; ${timeStr}`:''}</span></span>`
+        : `<span>${r.emoji} ${r.label}</span>`;
+      html+=`<button type="button" class="block med-btn" data-check="${r.check}" style="display:flex;align-items:center;gap:12px;text-align:left;padding:13px 14px;font-size:15px;border-radius:12px;background:${bg};border:2px solid ${bd};color:${ink};font-weight:${done?600:500};cursor:pointer">
         ${box}
-        <span>${r.emoji} ${r.label}${done?' &middot; done':''}</span>
+        ${label}
       </button>`;
     });
     html+=`</div>`;
     medsBody.innerHTML=html;
-    // wire taps here — inline onclick can't see functions inside the app's closure
+    // wire taps here (inline onclick can't see these functions — they live inside the app's closure)
     medsBody.querySelectorAll(".med-btn").forEach(btn=>{
       btn.addEventListener("click", ()=>{ logMedication(btn.dataset.check); renderMedsCard(); });
     });
-    $("#nextReminder").textContent=`Next: ${next.time}`;
   }
 
   /* ============ TODAY ============ */
@@ -1416,12 +1436,11 @@
   }
 
   /* ---- native only: quiet auto-sync from Health Connect (on open / resume) ---- */
-  let _lastAutoSync=0;
-  async function autoSyncHealthConnect(force){
+  let _syncing=false;
+  async function autoSyncHealthConnect(){
     const C=window.Capacitor, HC=C&&C.Plugins&&C.Plugins.HealthConnect;
-    if(!HC) return;
-    if(!force && Date.now()-_lastAutoSync < 20*60*1000) return; // at most every 20 min
-    _lastAutoSync=Date.now();
+    if(!HC || _syncing) return; // skip if not the phone app, or a sync is already running
+    _syncing=true;
     try{
       const avail=await HC.checkAvailability();
       if(avail.status!=="available") return;
@@ -1434,7 +1453,8 @@
       const active=document.querySelector(".screen.active");
       if(active&&active.id==="trends") renderTrends();
       else if(active&&active.id==="today") renderToday();
-    }catch(e){ /* stay quiet — the manual button surfaces errors */ }
+    }catch(e){ /* stay quiet — the menu's Sync button surfaces errors */ }
+    finally{ _syncing=false; }
   }
 
   /* ---- native only: restore a backup via the native picker ---- */
@@ -1457,8 +1477,9 @@
     wrap.id="sheet";
     wrap.style.cssText="position:fixed;inset:0;z-index:60;background:rgba(10,20,18,.45);display:flex;align-items:flex-end;justify-content:center";
     wrap.innerHTML = `
-      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)">
-        <div class="row"><h2 style="margin:0;font-size:19px">Your data</h2><button class="iconbtn" id="closeSheet" aria-label="Close">Close</button></div>
+      <div style="background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:12px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);max-height:88vh;overflow-y:auto">
+        ${sheetHandle()}
+        <div class="row"><button class="iconbtn" id="closeSheet" aria-label="Back">← Back</button><h2 style="margin:0;font-size:19px">Your data</h2></div>
         <p class="hint" style="margin:0">Everything stays private on this phone. Back up now and then so it's always safe.</p>
         <button class="btn primary block" id="doBackup">Back up (download a file)</button>
         <button class="btn ghost block" id="doRestore">Restore from a backup</button>
@@ -1470,17 +1491,19 @@
         ${!isNative?'<button class="btn primary block" id="importFitbit">Import Fitbit data</button>':''}
         ${!isNative?'<input type="file" id="fitbitFile" accept=".zip,.json,application/zip,application/json" style="display:none">':''}
         <p class="hint" style="margin:0">Brings in resting heart rate, sleep and steps from your export — it stays on this phone, nothing is uploaded. <strong>Can't find the file?</strong> In the file box, tap search and type <strong>takeout</strong>.</p>
+        <button class="btn ghost block" id="getDataGuide" style="font-size:14px">How to get my Fitbit data ↗</button>
         ${isNative?'<hr class="divider"><div class="row"><span style="font-weight:600">Auto-sync</span><span class="hint">Health Connect</span></div><button class="btn primary block" id="hcSync">Sync from Health Connect</button><p class="hint" style="margin:0">Pulls your recent resting HR, sleep, steps &amp; nighttime HR straight from your phone — no export needed. Your longer history still comes from the Fitbit import above.</p>':''}
         <hr class="divider">
         <div class="row"><span style="font-weight:600">Totals</span>
           <span class="hint">${state.standTests.length} tests · ${state.logs.length} logs · ${state.feelings.length} check-ins</span></div>
+        <p class="hint" style="text-align:center;margin:6px 0 0;opacity:.8">Steady v${APP_VERSION}${BUILD_ID?" · "+BUILD_ID:""}</p>
       </div>`;
-    document.body.appendChild(wrap);
-    const close=()=> wrap.remove();
+    const sheet=wrap.firstElementChild;
+    const close=openSheet(wrap, sheet, ()=> wrap.remove());
     $("#closeSheet").addEventListener("click", close);
-    wrap.addEventListener("click", e=>{ if(e.target===wrap) close(); });
     $("#doBackup").addEventListener("click", backup);
     $("#doRestore").addEventListener("click", ()=>{ if(isNative) restoreNative(close); else $("#restoreFile").click(); });
+    $("#getDataGuide").addEventListener("click", ()=> openExportGuide()); // opens over the menu; Back returns here
     $("#restoreFile").addEventListener("change", e=> restoreFromFile(e.target.files[0], close));
     if(!isNative){
       $("#importFitbit").addEventListener("click", ()=> $("#fitbitFile").click());
@@ -1520,6 +1543,7 @@
         state.standTests = d.standTests||[]; state.logs=d.logs||[]; state.feelings=d.feelings||[];
         state.settings = d.settings||{ageGroup:"adult"};
         state.health = Object.assign(emptyHealth(), d.health||{});
+        state.medications = d.medications||{};
         save(); if(close) close(); nav("today"); toast("Restored your data.");
       }catch(err){ toast("That file didn't look like a Steady backup."); }
     };
@@ -1546,11 +1570,13 @@
   if(checkDisclaimer()){
     renderToday();
     if(isNative){
-      autoSyncHealthConnect(true); // sync once on open
-      // and again each time the app comes back to the foreground
+      autoSyncHealthConnect(); // import Health Connect data on every open
+      // and again each time the app returns to the foreground
       document.addEventListener("visibilitychange", ()=>{
         if(!document.hidden && state.settings.disclaimerAgreed) autoSyncHealthConnect();
       });
+      // belt-and-suspenders: Capacitor fires 'resume' when the app is reopened from background
+      document.addEventListener("resume", ()=>{ if(state.settings.disclaimerAgreed) autoSyncHealthConnect(); }, false);
     }
   }
 })();
